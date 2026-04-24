@@ -1,0 +1,640 @@
+import 'package:flame/game.dart';
+import 'package:flame/components.dart';
+import 'package:flame/input.dart';
+import 'package:flame/events.dart';
+import 'package:flame/collisions.dart';
+import 'package:flame_audio/flame_audio.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'dart:math';
+
+void main() {
+  runApp(const MyApp());
+}
+
+class MyApp extends StatelessWidget {
+  const MyApp({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final padding = MediaQuery.of(context).padding;
+    return MaterialApp(
+      title: 'Alonel Game',
+      home: SafeArea(
+        child: Scaffold(
+          body: GameWidget(
+            game: MyGame(padding: padding),
+            autofocus: true,
+            overlayBuilderMap: {
+              'GameOver': (BuildContext context, MyGame game) {
+                return Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Text(
+                        'GAME OVER',
+                        style: TextStyle(
+                          color: Colors.red,
+                          fontSize: 64,
+                          fontWeight: FontWeight.bold,
+                          shadows: [Shadow(blurRadius: 10, color: Colors.black)],
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+                      ElevatedButton(
+                        onPressed: () {
+                          game.overlays.remove('GameOver');
+                          game.restart();
+                        },
+                        style: ElevatedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 15),
+                          backgroundColor: Colors.white,
+                          foregroundColor: Colors.black,
+                        ),
+                        child: const Text('Restart', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+                      ),
+                    ],
+                  ),
+                );
+              },
+            },
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class MyGame extends FlameGame
+    with KeyboardEvents, PanDetector, TapDetector, HasCollisionDetection {
+  late Player player;
+  final List<Enemy> enemies = [];
+  late TextComponent livesText;
+  late TextComponent scoreText;
+  late TextComponent levelText;
+  late EdgeInsets padding;
+  bool isGameOver = false;
+  int score = 0;
+  int currentLevel = 1;
+
+  MyGame({required this.padding});
+
+  @override
+  void update(double dt) {
+    super.update(dt);
+    if (!isGameOver) {
+      // Removed random enemy spawn for level-based gameplay
+    }
+  }
+
+  @override
+  Future<void> onLoad() async {
+    // Preload audio
+    try {
+      // await FlameAudio.audioCache.load('shot.mp3');
+    } catch (e) {
+      print('Failed to load audio: $e');
+    }
+
+    // Add background
+    final background = Background();
+    background.size = size;
+    add(background);
+
+    player = Player();
+    player.gameSize = size;
+    player.position = Vector2(
+      size.x / 2 - Player.playerSize / 2,
+      size.y - Player.playerSize - 20,
+    );
+    add(player);
+
+    final textStyle = TextPaint(
+      style: const TextStyle(
+        color: Colors.white,
+        fontSize: 24,
+        fontWeight: FontWeight.bold,
+        shadows: [
+          Shadow(blurRadius: 4.0, color: Colors.black, offset: Offset(2, 2)),
+        ],
+      ),
+    );
+
+    livesText = TextComponent(
+      text: '❤️' * player.lives,
+      position: Vector2(15, 15),
+      textRenderer: TextPaint(
+        style: const TextStyle(
+          fontSize: 20,
+          shadows: [
+            Shadow(blurRadius: 4.0, color: Colors.black, offset: Offset(2, 2)),
+          ],
+        ),
+      ),
+    );
+    add(livesText);
+
+    scoreText = TextComponent(
+      text: 'SCORE: $score',
+      position: Vector2(size.x / 2, 15),
+      anchor: Anchor.topCenter,
+      textRenderer: textStyle,
+    );
+    add(scoreText);
+
+    levelText = TextComponent(
+      text: 'LEVEL: $currentLevel',
+      position: Vector2(size.x - 15, 15),
+      anchor: Anchor.topRight,
+      textRenderer: textStyle,
+    );
+    add(levelText);
+
+    // Add enemies for level 1
+    spawnLevel();
+  }
+
+  @override
+  KeyEventResult onKeyEvent(
+    KeyEvent event,
+    Set<LogicalKeyboardKey> keysPressed,
+  ) {
+    if (event is KeyDownEvent) {
+      switch (event.logicalKey) {
+        case LogicalKeyboardKey.arrowLeft:
+          player.isMovingLeft = true;
+          return KeyEventResult.handled;
+        case LogicalKeyboardKey.arrowRight:
+          player.isMovingRight = true;
+          return KeyEventResult.handled;
+        case LogicalKeyboardKey.arrowUp:
+          player.isMovingUp = true;
+          return KeyEventResult.handled;
+        case LogicalKeyboardKey.arrowDown:
+          player.isMovingDown = true;
+          return KeyEventResult.handled;
+        case LogicalKeyboardKey.space:
+          player.shoot();
+          return KeyEventResult.handled;
+      }
+    } else if (event is KeyUpEvent) {
+      switch (event.logicalKey) {
+        case LogicalKeyboardKey.arrowLeft:
+          player.isMovingLeft = false;
+          return KeyEventResult.handled;
+        case LogicalKeyboardKey.arrowRight:
+          player.isMovingRight = false;
+          return KeyEventResult.handled;
+        case LogicalKeyboardKey.arrowUp:
+          player.isMovingUp = false;
+          return KeyEventResult.handled;
+        case LogicalKeyboardKey.arrowDown:
+          player.isMovingDown = false;
+          return KeyEventResult.handled;
+      }
+    }
+    return KeyEventResult.ignored;
+  }
+
+  @override
+  void onPanUpdate(DragUpdateInfo info) {
+    player.position += info.delta.global;
+  }
+
+  @override
+  void onTapDown(TapDownInfo info) {
+    player.shoot();
+  }
+
+  void updateLives() {
+    livesText.text = '❤️' * player.lives;
+  }
+
+  void updateScore() {
+    scoreText.text = 'SCORE: $score';
+  }
+
+  void updateLevel() {
+    levelText.text = 'LEVEL: $currentLevel';
+  }
+
+  void spawnLevel() {
+    enemies.clear();
+    final numEnemies = currentLevel + 2;
+    for (int i = 0; i < numEnemies; i++) {
+      final enemy = Enemy();
+      enemy.gameSize = size;
+      enemy.player = player;
+      enemy.level = currentLevel;
+      enemy.maxHealth = currentLevel;
+      enemy.health = enemy.maxHealth;
+      enemy.position = Vector2(
+        (size.x / (numEnemies + 1)) * (i + 1),
+        size.y * 0.2,
+      );
+      enemies.add(enemy);
+      add(enemy);
+    }
+  }
+
+  void gameOver() {
+    if (isGameOver) return;
+    isGameOver = true;
+    overlays.add('GameOver');
+    pauseEngine();
+  }
+
+  void restart() {
+    isGameOver = false;
+    score = 0;
+    currentLevel = 1;
+    player.lives = 3;
+    player.hitCount = 0;
+    updateScore();
+    updateLevel();
+    updateLives();
+    
+    player.position = Vector2(
+      size.x / 2 - Player.playerSize / 2,
+      size.y - Player.playerSize - 20,
+    );
+    
+    children.whereType<Enemy>().forEach((enemy) => enemy.removeFromParent());
+    children.whereType<Bullet>().forEach((bullet) => bullet.removeFromParent());
+    children.whereType<PlayerBullet>().forEach((bullet) => bullet.removeFromParent());
+    children.whereType<Explosion>().forEach((explosion) => explosion.removeFromParent());
+    
+    enemies.clear();
+    spawnLevel();
+    resumeEngine();
+  }
+}
+
+class Player extends SpriteComponent with CollisionCallbacks {
+  static const double speed = 200.0;
+  static const double playerSize = 50.0;
+
+  bool isMovingLeft = false;
+  bool isMovingRight = false;
+  bool isMovingUp = false;
+  bool isMovingDown = false;
+
+  late Vector2 gameSize;
+  int lives = 3;
+  int hitCount = 0;
+  double shootTimer = 0.0;
+  static const double shootInterval = 1.0; // Shoot every 1 second
+
+  @override
+  Future<void> onLoad() async {
+    await super.onLoad();
+    sprite = await Sprite.load('ship.png');
+    size = Vector2.all(playerSize);
+    add(CircleHitbox());
+  }
+
+  @override
+  void update(double dt) {
+    super.update(dt);
+    if (isMovingLeft) {
+      position.x -= speed * dt;
+    }
+    if (isMovingRight) {
+      position.x += speed * dt;
+    }
+    if (isMovingUp) {
+      position.y -= speed * dt;
+    }
+    if (isMovingDown) {
+      position.y += speed * dt;
+    }
+    // Clamp position to screen boundaries
+    position.x = position.x.clamp(0.0, gameSize.x - size.x);
+    position.y = position.y.clamp(0.0, gameSize.y - size.y);
+
+    // Player shooting
+    shootTimer += dt;
+    if (shootTimer >= shootInterval) {
+      shootTimer = 0.0;
+      shoot();
+    }
+  }
+
+  void takeDamage() {
+    if ((parent as MyGame).isGameOver) return;
+    
+    hitCount++;
+    if (hitCount % 2 == 0) {
+      lives--;
+      if (lives < 0) lives = 0;
+      (parent as MyGame).updateLives();
+      if (lives <= 0) {
+        (parent as MyGame).gameOver();
+      }
+    }
+  }
+
+  void shoot() {
+    final bullet = PlayerBullet();
+    bullet.position =
+        position.clone() +
+            Vector2(size.x / 2 - bullet.size.x / 2, -bullet.size.y);
+    bullet.direction = Vector2(0, -1); // Shoot upwards
+    (parent as MyGame).add(bullet);
+    // Play sound
+    try {
+      // FlameAudio.play('shot.mp3', volume: 0.3);
+    } catch (e) {
+      // Silently fail if audio doesn't exist
+    }
+  }
+}
+
+class Background extends SpriteComponent {
+  @override
+  Future<void> onLoad() async {
+    await super.onLoad();
+    sprite = await Sprite.load('background.png');
+  }
+}
+
+class PlayerBullet extends PositionComponent with CollisionCallbacks {
+  static const double bulletSize = 8.0;
+  static const double speed = 400.0;
+  late Vector2 direction;
+
+  @override
+  Future<void> onLoad() async {
+    this.size = Vector2.all(bulletSize);
+    add(CircleHitbox());
+  }
+
+  @override
+  void update(double dt) {
+    super.update(dt);
+    position += direction * speed * dt;
+    // Remove if off screen
+    final gameSize = (parent as MyGame).size;
+    if (position.x < -size.x ||
+        position.x > gameSize.x + size.x ||
+        position.y < -size.y ||
+        position.y > gameSize.y + size.y) {
+      removeFromParent();
+    }
+  }
+
+  @override
+  void onCollision(Set<Vector2> intersectionPoints, PositionComponent other) {
+    super.onCollision(intersectionPoints, other);
+    if (other is Enemy) {
+      // Damage enemy
+      other.health--;
+      removeFromParent(); // Remove bullet
+      if (other.health <= 0) {
+        // Enemy dies
+        other.removeFromParent();
+        (parent as MyGame).enemies.remove(other);
+        (parent as MyGame).score += 10; // Add score
+        (parent as MyGame).updateScore();
+        // Check if level complete
+        if ((parent as MyGame).enemies.isEmpty) {
+          (parent as MyGame).currentLevel++;
+          (parent as MyGame).updateLevel();
+          (parent as MyGame).spawnLevel();
+        }
+      }
+      // Create explosion animation
+      final explosion = Explosion()
+        ..position = other.position.clone()
+        ..gameSize = other.gameSize;
+      (parent as MyGame).add(explosion);
+    }
+  }
+
+  @override
+  void render(Canvas canvas) {
+    canvas.drawRect(
+      Rect.fromLTWH(0, 0, size.x, size.y),
+      Paint()..color = Colors.cyan,
+    );
+  }
+}
+
+class Enemy extends SpriteComponent {
+  static const double enemySize = 40.0;
+  late Vector2 gameSize;
+  late Player player;
+  double shootTimer = 0.0;
+  static const double shootInterval = 1.0; // Decreased from 2.0 for more shots
+  static const double moveSpeed = 50.0; // Slow movement
+  double direction = 1.0; // 1 for right, -1 for left
+  late int health; // New: health system
+  late int maxHealth; // New: max health system
+  late int level;
+
+  @override
+  Future<void> onLoad() async {
+    await super.onLoad();
+    sprite = await Sprite.load('ship2.png');
+    size = Vector2.all(enemySize);
+    add(CircleHitbox());
+  }
+
+  @override
+  void update(double dt) {
+    super.update(dt);
+    shootTimer += dt;
+    if (shootTimer >= shootInterval) {
+      shootTimer = 0.0;
+      shoot();
+    }
+    // Move left and right slowly
+    position.x += moveSpeed * direction * dt;
+    if (position.x <= 0 || position.x >= gameSize.x - size.x) {
+      direction = -direction;
+    }
+    // Clamp to prevent sticking
+    position.x = position.x.clamp(0.0, gameSize.x - size.x);
+  }
+
+  void shoot() {
+    final bullet = Bullet();
+    bullet.position = position.clone();
+
+    // Calculate base direction towards player
+    Vector2 toPlayer = player.position - position;
+    Vector2 baseDirection;
+    if (toPlayer.length > 0.1) {
+      baseDirection = toPlayer.normalized();
+    } else {
+      // If too close, shoot in a random direction
+      double angle = Random().nextDouble() * 2 * pi;
+      baseDirection = Vector2(cos(angle), sin(angle));
+    }
+
+    // Add random angle variation (±30 degrees)
+    double randomAngle =
+        (Random().nextDouble() - 0.5) * pi / 3; // ±30 degrees in radians
+
+    // Rotate the direction vector
+    double cosAngle = cos(randomAngle);
+    double sinAngle = sin(randomAngle);
+    Vector2 rotatedDirection = Vector2(
+      baseDirection.x * cosAngle - baseDirection.y * sinAngle,
+      baseDirection.x * sinAngle + baseDirection.y * cosAngle,
+    );
+
+    bullet.direction = rotatedDirection;
+    (parent as MyGame).add(bullet);
+    // Play sound
+    try {
+      // FlameAudio.play('shot.mp3', volume: 0.5);
+    } catch (e) {
+      // Silently fail if audio doesn't exist
+    }
+  }
+
+
+}
+
+class Bullet extends PositionComponent with CollisionCallbacks {
+  static const double bulletSize = 10.0;
+  static const double speed = 500.0; // Increased from 300
+  late Vector2 direction;
+
+  @override
+  Future<void> onLoad() async {
+    this.size = Vector2.all(bulletSize);
+    add(CircleHitbox());
+  }
+
+  @override
+  void update(double dt) {
+    super.update(dt);
+    position += direction * speed * dt;
+    // Remove if off screen
+    final gameSize = (parent as MyGame).size;
+    if (position.x < -size.x ||
+        position.x > gameSize.x + size.x ||
+        position.y < -size.y ||
+        position.y > gameSize.y + size.y) {
+      removeFromParent();
+    }
+  }
+
+  @override
+  void onCollision(Set<Vector2> intersectionPoints, PositionComponent other) {
+    super.onCollision(intersectionPoints, other);
+    if (other is Player) {
+      other.takeDamage();
+      removeFromParent();
+    }
+  }
+
+  @override
+  void render(Canvas canvas) {
+    canvas.drawCircle(
+      Offset(size.x / 2, size.y / 2),
+      size.x / 2,
+      Paint()..color = Colors.yellow,
+    );
+  }
+}
+
+class Explosion extends PositionComponent {
+  late Vector2 gameSize;
+  double lifeTimer = 0.0;
+  static const double maxLife = 0.5; // Duração da explosão
+  final List<_ExplosionParticle> particles = [];
+
+  Explosion() : super(size: Vector2.all(64.0)) {
+    final random = Random();
+    // Gerar 25 partículas para a explosão
+    for (int i = 0; i < 25; i++) {
+      double angle = random.nextDouble() * 2 * pi;
+      double speed = random.nextDouble() * 150 + 50; // Velocidade aleatória
+      double particleSize = random.nextDouble() * 4 + 2; // Tamanho aleatório
+      Color color = [
+        const Color(0xFFFF0000), // Vermelho
+        const Color(0xFFFF6B35), // Laranja escuro
+        const Color(0xFFFFA500), // Laranja claro
+        const Color(0xFFFFFFFF), // Branco
+      ][random.nextInt(4)];
+      
+      particles.add(_ExplosionParticle(
+        velocity: Vector2(cos(angle), sin(angle)) * speed,
+        color: color,
+        size: particleSize,
+      ));
+    }
+  }
+
+  @override
+  void update(double dt) {
+    super.update(dt);
+    if (parent != null) {
+      gameSize = (parent as MyGame).size;
+    }
+    
+    lifeTimer += dt;
+    if (lifeTimer >= maxLife) {
+      removeFromParent();
+    }
+    
+    // Atualizar posição das partículas
+    for (var particle in particles) {
+      particle.position += particle.velocity * dt;
+      particle.velocity *= 0.92; // Desaceleração suave (fricção)
+    }
+  }
+
+  @override
+  void render(Canvas canvas) {
+    double progress = lifeTimer / maxLife;
+    double opacity = 1.0 - progress;
+    if (opacity < 0.0) opacity = 0.0;
+
+    final center = Offset(size.x / 2, size.y / 2);
+
+    for (var particle in particles) {
+      final paint = Paint()
+        ..color = particle.color.withOpacity(opacity)
+        ..style = PaintingStyle.fill;
+      
+      final currentSize = particle.size * (1.0 - progress * 0.5);
+      
+      // Partícula principal
+      canvas.drawCircle(
+        center + Offset(particle.position.x, particle.position.y),
+        currentSize,
+        paint,
+      );
+      
+      // Brilho da partícula
+      final glowPaint = Paint()
+        ..color = particle.color.withOpacity(opacity * 0.5)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = currentSize * 1.5
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 3.0);
+        
+      canvas.drawCircle(
+        center + Offset(particle.position.x, particle.position.y),
+        currentSize,
+        glowPaint,
+      );
+    }
+  }
+}
+
+class _ExplosionParticle {
+  Vector2 position = Vector2.zero();
+  Vector2 velocity;
+  Color color;
+  double size;
+
+  _ExplosionParticle({
+    required this.velocity,
+    required this.color,
+    required this.size,
+  });
+}
