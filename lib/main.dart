@@ -6,6 +6,7 @@ import 'package:flame/collisions.dart';
 import 'package:flame_audio/flame_audio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:math';
 
 void main() {
@@ -104,9 +105,12 @@ class MyGame extends FlameGame
   late TextComponent livesText;
   late TextComponent scoreText;
   late TextComponent levelText;
+  late TextComponent highScoreText;
+  late SharedPreferences prefs;
   late EdgeInsets padding;
   bool isGameOver = false;
   int score = 0;
+  int highScore = 0;
   int currentLevel = 1;
 
   MyGame({required this.padding});
@@ -121,6 +125,10 @@ class MyGame extends FlameGame
 
   @override
   Future<void> onLoad() async {
+    // Carrega o high score
+    prefs = await SharedPreferences.getInstance();
+    highScore = prefs.getInt('highScore') ?? 0;
+
     // Preload audio
     try {
       // await FlameAudio.audioCache.load('shot.mp3');
@@ -153,7 +161,7 @@ class MyGame extends FlameGame
     );
 
     livesText = TextComponent(
-      text: '❤️' * player.lives,
+      text: '❤️ x${player.lives}',
       position: Vector2(15, 15),
       textRenderer: TextPaint(
         style: const TextStyle(
@@ -173,6 +181,21 @@ class MyGame extends FlameGame
       textRenderer: textStyle,
     );
     add(scoreText);
+
+    highScoreText = TextComponent(
+      text: 'HI-SCORE: $highScore',
+      position: Vector2(size.x / 2, 45),
+      anchor: Anchor.topCenter,
+      textRenderer: TextPaint(
+        style: const TextStyle(
+          color: Colors.yellow,
+          fontSize: 18,
+          fontWeight: FontWeight.bold,
+          shadows: [Shadow(blurRadius: 4.0, color: Colors.black, offset: Offset(2, 2))],
+        ),
+      ),
+    );
+    add(highScoreText);
 
     levelText = TextComponent(
       text: 'LEVEL: $currentLevel',
@@ -242,11 +265,16 @@ class MyGame extends FlameGame
   }
 
   void updateLives() {
-    livesText.text = '❤️' * player.lives;
+    livesText.text = '❤️ x${player.lives}';
   }
 
   void updateScore() {
     scoreText.text = 'SCORE: $score';
+    if (score > highScore) {
+      highScore = score;
+      highScoreText.text = 'HI-SCORE: $highScore';
+      prefs.setInt('highScore', highScore);
+    }
   }
 
   void updateLevel() {
@@ -262,7 +290,10 @@ class MyGame extends FlameGame
 
   void spawnLevel() {
     enemies.clear();
-    final numEnemies = currentLevel + 2;
+    
+    // Até o level 9 vai aumentando as naves, a partir do 10 estabiliza em 5 naves
+    int numEnemies = currentLevel < 10 ? currentLevel + 1 : 5;
+    
     for (int i = 0; i < numEnemies; i++) {
       final enemy = Enemy();
       enemy.gameSize = size;
@@ -479,8 +510,8 @@ class Enemy extends SpriteComponent {
   late Vector2 gameSize;
   late Player player;
   double shootTimer = 0.0;
-  static const double shootInterval = 1.0; // Decreased from 2.0 for more shots
-  static const double moveSpeed = 50.0; // Slow movement
+  late double shootInterval;
+  late double moveSpeed;
   double direction = 1.0; // 1 for right, -1 for left
   late int health; // New: health system
   late int maxHealth; // New: max health system
@@ -492,6 +523,20 @@ class Enemy extends SpriteComponent {
     sprite = await Sprite.load('ship2.png');
     size = Vector2.all(enemySize);
     add(CircleHitbox());
+    
+    // Calcula dificuldade a cada 10 níveis
+    int difficultyTier = level ~/ 10;
+    
+    // Mais rápido a cada 10 níveis (começa em 50)
+    moveSpeed = 50.0 + (difficultyTier * 20.0);
+    
+    if (difficultyTier >= 1) {
+      // A partir do level 10, como tem menos naves, elas atiram BEM mais rápido para compensar
+      shootInterval = max(0.4, 0.9 - (difficultyTier * 0.1));
+    } else {
+      // Levels 1 a 9 atiram devagar
+      shootInterval = 1.8;
+    }
   }
 
   @override
@@ -514,6 +559,7 @@ class Enemy extends SpriteComponent {
   void shoot() {
     final bullet = Bullet();
     bullet.position = position.clone();
+    bullet.difficultyTier = level ~/ 10; // Repassa a dificuldade para a bala
 
     // Calculate base direction towards player
     Vector2 toPlayer = player.position - position;
@@ -553,13 +599,17 @@ class Enemy extends SpriteComponent {
 
 class Bullet extends PositionComponent with CollisionCallbacks {
   static const double bulletSize = 10.0;
-  static const double speed = 500.0; // Increased from 300
+  late double speed;
   late Vector2 direction;
+  int difficultyTier = 0;
 
   @override
   Future<void> onLoad() async {
     this.size = Vector2.all(bulletSize);
     add(CircleHitbox());
+    
+    // A bala fica mais rápida a cada 10 níveis
+    speed = 250.0 + (difficultyTier * 50.0);
   }
 
   @override
