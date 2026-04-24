@@ -25,7 +25,39 @@ class MyApp extends StatelessWidget {
           body: GameWidget(
             game: MyGame(padding: padding),
             autofocus: true,
+            initialActiveOverlays: const ['StartMenu'],
             overlayBuilderMap: {
+              'StartMenu': (BuildContext context, MyGame game) {
+                return Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Text(
+                        'ALONE Z',
+                        style: TextStyle(
+                          color: Colors.cyan,
+                          fontSize: 72,
+                          fontWeight: FontWeight.bold,
+                          shadows: [Shadow(blurRadius: 10, color: Colors.black)],
+                        ),
+                      ),
+                      const SizedBox(height: 40),
+                      ElevatedButton(
+                        onPressed: () {
+                          game.overlays.remove('StartMenu');
+                          game.resumeEngine();
+                        },
+                        style: ElevatedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 15),
+                          backgroundColor: Colors.white,
+                          foregroundColor: Colors.black,
+                        ),
+                        child: const Text('START GAME', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+                      ),
+                    ],
+                  ),
+                );
+              },
               'GameOver': (BuildContext context, MyGame game) {
                 return Center(
                   child: Column(
@@ -152,6 +184,9 @@ class MyGame extends FlameGame
 
     // Add enemies for level 1
     spawnLevel();
+    
+    // Pause the engine initially so the Start Menu handles resuming
+    pauseEngine();
   }
 
   @override
@@ -216,6 +251,13 @@ class MyGame extends FlameGame
 
   void updateLevel() {
     levelText.text = 'LEVEL: $currentLevel';
+  }
+
+  void spawnHeartPowerup() {
+    final heart = HeartPowerup()
+      ..position = Vector2(Random().nextDouble() * (size.x - 30), -30)
+      ..gameSize = size;
+    add(heart);
   }
 
   void spawnLevel() {
@@ -320,6 +362,11 @@ class Player extends SpriteComponent with CollisionCallbacks {
     }
   }
 
+  void heal() {
+    lives++;
+    (parent as MyGame).updateLives();
+  }
+
   void takeDamage() {
     if ((parent as MyGame).isGameOver) return;
     
@@ -394,13 +441,20 @@ class PlayerBullet extends PositionComponent with CollisionCallbacks {
         // Enemy dies
         other.removeFromParent();
         (parent as MyGame).enemies.remove(other);
-        (parent as MyGame).score += 10; // Add score
-        (parent as MyGame).updateScore();
+        final game = parent as MyGame;
+        game.score += 10; // Add score
+        game.updateScore();
+        
+        // Check for extra life every 100 score
+        if (game.score > 0 && game.score % 100 == 0) {
+          game.spawnHeartPowerup();
+        }
+        
         // Check if level complete
-        if ((parent as MyGame).enemies.isEmpty) {
-          (parent as MyGame).currentLevel++;
-          (parent as MyGame).updateLevel();
-          (parent as MyGame).spawnLevel();
+        if (game.enemies.isEmpty) {
+          game.currentLevel++;
+          game.updateLevel();
+          game.spawnLevel();
         }
       }
       // Create explosion animation
@@ -546,6 +600,10 @@ class Explosion extends PositionComponent {
   double lifeTimer = 0.0;
   static const double maxLife = 0.5; // Duração da explosão
   final List<_ExplosionParticle> particles = [];
+  
+  // Pré-alocar objetos Paint para evitar criar centenas por frame
+  final Paint _mainPaint = Paint()..style = PaintingStyle.fill;
+  final Paint _glowPaint = Paint()..style = PaintingStyle.fill;
 
   Explosion() : super(size: Vector2.all(64.0)) {
     final random = Random();
@@ -592,36 +650,21 @@ class Explosion extends PositionComponent {
   void render(Canvas canvas) {
     double progress = lifeTimer / maxLife;
     double opacity = 1.0 - progress;
-    if (opacity < 0.0) opacity = 0.0;
+    if (opacity <= 0.0) return;
 
     final center = Offset(size.x / 2, size.y / 2);
 
     for (var particle in particles) {
-      final paint = Paint()
-        ..color = particle.color.withOpacity(opacity)
-        ..style = PaintingStyle.fill;
-      
       final currentSize = particle.size * (1.0 - progress * 0.5);
+      final offset = center + Offset(particle.position.x, particle.position.y);
+      
+      // Efeito de brilho super leve (sem Blur pesado, apenas um círculo maior semi-transparente)
+      _glowPaint.color = particle.color.withOpacity(opacity * 0.3);
+      canvas.drawCircle(offset, currentSize * 2.5, _glowPaint);
       
       // Partícula principal
-      canvas.drawCircle(
-        center + Offset(particle.position.x, particle.position.y),
-        currentSize,
-        paint,
-      );
-      
-      // Brilho da partícula
-      final glowPaint = Paint()
-        ..color = particle.color.withOpacity(opacity * 0.5)
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = currentSize * 1.5
-        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 3.0);
-        
-      canvas.drawCircle(
-        center + Offset(particle.position.x, particle.position.y),
-        currentSize,
-        glowPaint,
-      );
+      _mainPaint.color = particle.color.withOpacity(opacity);
+      canvas.drawCircle(offset, currentSize, _mainPaint);
     }
   }
 }
@@ -637,4 +680,46 @@ class _ExplosionParticle {
     required this.color,
     required this.size,
   });
+}
+
+class HeartPowerup extends PositionComponent with CollisionCallbacks {
+  static const double heartSize = 30.0;
+  late Vector2 gameSize;
+  static const double fallSpeed = 150.0;
+
+  HeartPowerup() : super(size: Vector2.all(heartSize)) {
+    add(CircleHitbox());
+  }
+
+  @override
+  void update(double dt) {
+    super.update(dt);
+    position.y += fallSpeed * dt;
+    if (parent != null) {
+      gameSize = (parent as MyGame).size;
+      if (position.y > gameSize.y + size.y) {
+        removeFromParent();
+      }
+    }
+  }
+
+  @override
+  void onCollision(Set<Vector2> intersectionPoints, PositionComponent other) {
+    super.onCollision(intersectionPoints, other);
+    if (other is Player) {
+      other.heal();
+      removeFromParent();
+    }
+  }
+
+  @override
+  void render(Canvas canvas) {
+    final textPaint = TextPaint(
+      style: const TextStyle(
+        fontSize: 30,
+        shadows: [Shadow(blurRadius: 4.0, color: Colors.black, offset: Offset(2, 2))],
+      ),
+    );
+    textPaint.render(canvas, '❤️', Vector2.zero());
+  }
 }
