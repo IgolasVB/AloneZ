@@ -46,6 +46,7 @@ class MyApp extends StatelessWidget {
                       ElevatedButton(
                         onPressed: () {
                           game.overlays.remove('StartMenu');
+                          game.overlays.add('PauseButton');
                           game.resumeEngine();
                         },
                         style: ElevatedButton.styleFrom(
@@ -85,6 +86,54 @@ class MyApp extends StatelessWidget {
                           foregroundColor: Colors.black,
                         ),
                         child: const Text('Restart', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+                      ),
+                    ],
+                  ),
+                );
+              },
+              'PauseButton': (BuildContext context, MyGame game) {
+                return Positioned(
+                  top: 60,
+                  right: 10,
+                  child: IconButton(
+                    icon: const Icon(Icons.pause, color: Colors.white, size: 36),
+                    onPressed: () {
+                      if (!game.isGameOver) {
+                        game.pauseEngine();
+                        game.overlays.remove('PauseButton');
+                        game.overlays.add('PauseMenu');
+                      }
+                    },
+                  ),
+                );
+              },
+              'PauseMenu': (BuildContext context, MyGame game) {
+                return Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Text(
+                        'PAUSED',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 64,
+                          fontWeight: FontWeight.bold,
+                          shadows: [Shadow(blurRadius: 10, color: Colors.black)],
+                        ),
+                      ),
+                      const SizedBox(height: 40),
+                      ElevatedButton(
+                        onPressed: () {
+                          game.overlays.remove('PauseMenu');
+                          game.overlays.add('PauseButton');
+                          game.resumeEngine();
+                        },
+                        style: ElevatedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 15),
+                          backgroundColor: Colors.white,
+                          foregroundColor: Colors.black,
+                        ),
+                        child: const Text('RESUME', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
                       ),
                     ],
                   ),
@@ -288,6 +337,13 @@ class MyGame extends FlameGame
     add(heart);
   }
 
+  void spawnWeaponPowerup() {
+    final powerup = WeaponPowerup()
+      ..position = Vector2(Random().nextDouble() * (size.x - 30), -30)
+      ..gameSize = size;
+    add(powerup);
+  }
+
   void spawnLevel() {
     enemies.clear();
     
@@ -313,6 +369,7 @@ class MyGame extends FlameGame
   void gameOver() {
     if (isGameOver) return;
     isGameOver = true;
+    overlays.remove('PauseButton');
     overlays.add('GameOver');
     pauseEngine();
   }
@@ -323,6 +380,8 @@ class MyGame extends FlameGame
     currentLevel = 1;
     player.lives = 3;
     player.hitCount = 0;
+    player.weaponLevel = 1;
+    player.shootInterval = 1.0;
     updateScore();
     updateLevel();
     updateLives();
@@ -339,6 +398,7 @@ class MyGame extends FlameGame
     
     enemies.clear();
     spawnLevel();
+    overlays.add('PauseButton');
     resumeEngine();
   }
 }
@@ -356,7 +416,8 @@ class Player extends SpriteComponent with CollisionCallbacks {
   int lives = 3;
   int hitCount = 0;
   double shootTimer = 0.0;
-  static const double shootInterval = 1.0; // Shoot every 1 second
+  double shootInterval = 1.0; // Shoot every 1 second
+  int weaponLevel = 1;
 
   @override
   Future<void> onLoad() async {
@@ -412,19 +473,41 @@ class Player extends SpriteComponent with CollisionCallbacks {
     }
   }
 
+  void upgradeWeapon() {
+    if (shootInterval > 0.3) {
+      shootInterval -= 0.15; // Atira mais rápido
+    } else if (weaponLevel < 3) {
+      weaponLevel++; // Adiciona mais tiros simultâneos
+    }
+  }
+
   void shoot() {
-    final bullet = PlayerBullet();
-    bullet.position =
-        position.clone() +
-            Vector2(size.x / 2 - bullet.size.x / 2, -bullet.size.y);
-    bullet.direction = Vector2(0, -1); // Shoot upwards
-    (parent as MyGame).add(bullet);
+    if (weaponLevel == 1) {
+      _spawnBullet(Vector2(0, -1));
+    } else if (weaponLevel == 2) {
+      _spawnBullet(Vector2(-0.2, -1));
+      _spawnBullet(Vector2(0.2, -1));
+    } else {
+      _spawnBullet(Vector2(-0.3, -1));
+      _spawnBullet(Vector2(0, -1));
+      _spawnBullet(Vector2(0.3, -1));
+    }
+    
     // Play sound
     try {
       // FlameAudio.play('shot.mp3', volume: 0.3);
     } catch (e) {
       // Silently fail if audio doesn't exist
     }
+  }
+
+  void _spawnBullet(Vector2 dir) {
+    final bullet = PlayerBullet();
+    bullet.position =
+        position.clone() +
+            Vector2(size.x / 2 - bullet.size.x / 2, -bullet.size.y);
+    bullet.direction = dir.normalized();
+    (parent as MyGame).add(bullet);
   }
 }
 
@@ -479,6 +562,11 @@ class PlayerBullet extends PositionComponent with CollisionCallbacks {
         // Check for extra life every 100 score
         if (game.score > 0 && game.score % 100 == 0) {
           game.spawnHeartPowerup();
+        }
+        
+        // Check for weapon upgrade every 150 score
+        if (game.score > 0 && game.score % 150 == 0) {
+          game.spawnWeaponPowerup();
         }
         
         // Check if level complete
@@ -771,5 +859,47 @@ class HeartPowerup extends PositionComponent with CollisionCallbacks {
       ),
     );
     textPaint.render(canvas, '❤️', Vector2.zero());
+  }
+}
+
+class WeaponPowerup extends PositionComponent with CollisionCallbacks {
+  static const double itemSize = 30.0;
+  late Vector2 gameSize;
+  static const double fallSpeed = 150.0;
+
+  WeaponPowerup() : super(size: Vector2.all(itemSize)) {
+    add(CircleHitbox());
+  }
+
+  @override
+  void update(double dt) {
+    super.update(dt);
+    position.y += fallSpeed * dt;
+    if (parent != null) {
+      gameSize = (parent as MyGame).size;
+      if (position.y > gameSize.y + size.y) {
+        removeFromParent();
+      }
+    }
+  }
+
+  @override
+  void onCollision(Set<Vector2> intersectionPoints, PositionComponent other) {
+    super.onCollision(intersectionPoints, other);
+    if (other is Player) {
+      other.upgradeWeapon();
+      removeFromParent();
+    }
+  }
+
+  @override
+  void render(Canvas canvas) {
+    final textPaint = TextPaint(
+      style: const TextStyle(
+        fontSize: 30,
+        shadows: [Shadow(blurRadius: 4.0, color: Colors.black, offset: Offset(2, 2))],
+      ),
+    );
+    textPaint.render(canvas, '⚡', Vector2.zero());
   }
 }
