@@ -29,55 +29,128 @@ class MyApp extends StatelessWidget {
             initialActiveOverlays: const ['StartMenu'],
             overlayBuilderMap: {
               'StartMenu': (BuildContext context, MyGame game) {
-                return Center(
+                return Stack(
+                  children: [
+                    Positioned.fill(
+                      child: Image.asset(
+                        'assets/images/fundomenu.png',
+                        fit: BoxFit.cover,
+                      ),
+                    ),
+                    Positioned.fill(
+                      child: Container(color: const Color(0x66000000)),
+                    ),
+                    Center(
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const AloneZLogo(),
+                      Image.asset(
+                        'assets/images/alonez.png',
+                        width: 320,
+                        fit: BoxFit.contain,
+                      ),
                       const SizedBox(height: 20),
                       CoinCounter(value: game.coins, fontSize: 28),
-                      const SizedBox(height: 40),
-                      ElevatedButton(
-                        onPressed: () {
-                          game.overlays.remove('StartMenu');
-                          game.overlays.add('PauseButton');
-                          game.resumeEngine();
-                        },
-                        style: ElevatedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 15),
-                          backgroundColor: Colors.white,
-                          foregroundColor: Colors.black,
-                        ),
-                        child: const Text('PLAY', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
-                      ),
-                      const SizedBox(height: 20),
-                      ElevatedButton(
-                        onPressed: () {
-                          game.overlays.remove('StartMenu');
-                          game.overlays.add('ShopMenu');
-                        },
-                        style: ElevatedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 15),
-                          backgroundColor: Colors.white,
-                          foregroundColor: Colors.black,
-                        ),
-                        child: const Text('LOJA', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
-                      ),
-                      const SizedBox(height: 20),
-                      ElevatedButton(
-                        onPressed: () {
-                          game.overlays.remove('StartMenu');
-                          game.overlays.add('InventoryMenu');
-                        },
-                        style: ElevatedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 15),
-                          backgroundColor: Colors.white,
-                          foregroundColor: Colors.black,
-                        ),
-                        child: const Text('INVENTARIO', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
-                      ),
+                          const SizedBox(height: 40),
+                          MainMenuButton(
+                            label: 'PLAY',
+                            primary: true,
+                            icon: Icons.play_arrow,
+                            onPressed: () {
+                              game.overlays.remove('StartMenu');
+                              game.overlays.add('PauseButton');
+                              game.resumeEngine();
+                            },
+                          ),
+                          const SizedBox(height: 20),
+                          MainMenuButton(
+                            label: 'LOJA',
+                            icon: Icons.store,
+                            onPressed: () {
+                              game.overlays.remove('StartMenu');
+                              game.overlays.add('ShopMenu');
+                            },
+                          ),
+                          const SizedBox(height: 20),
+                          MainMenuButton(
+                            label: 'INVENTARIO',
+                            icon: Icons.rocket_launch,
+                            onPressed: () {
+                              game.overlays.remove('StartMenu');
+                              game.overlays.add('InventoryMenu');
+                            },
+                          ),
+                          const SizedBox(height: 20),
+                          MainMenuButton(
+                            label: 'COINS GRATIS',
+                            icon: Icons.smart_display,
+                            onPressed: () {
+                              game.overlays.remove('StartMenu');
+                              game.overlays.add('FreeCoinsMenu');
+                            },
+                          ),
                     ],
                   ),
+                    ),
+                  ],
+                );
+              },
+              'FreeCoinsMenu': (BuildContext context, MyGame game) {
+                return StatefulBuilder(
+                  builder: (context, setState) {
+                    return Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Text(
+                            'COINS GRATIS',
+                            style: TextStyle(
+                              color: Colors.cyan,
+                              fontSize: 54,
+                              fontWeight: FontWeight.bold,
+                              shadows: [Shadow(blurRadius: 10, color: Colors.black)],
+                            ),
+                          ),
+                          const SizedBox(height: 20),
+                          CoinCounter(value: game.coins, fontSize: 28),
+                          const SizedBox(height: 30),
+                          const Text(
+                            'Anuncios em breve.',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 22,
+                              fontWeight: FontWeight.bold,
+                              shadows: [Shadow(blurRadius: 8, color: Colors.black)],
+                            ),
+                          ),
+                          const SizedBox(height: 30),
+                          ElevatedButton(
+                            onPressed: null,
+                            style: ElevatedButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 15),
+                              backgroundColor: Colors.white,
+                              foregroundColor: Colors.black,
+                            ),
+                            child: const Text('INDISPONIVEL', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+                          ),
+                          const SizedBox(height: 20),
+                          ElevatedButton(
+                            onPressed: () {
+                              game.overlays.remove('FreeCoinsMenu');
+                              game.overlays.add('StartMenu');
+                            },
+                            style: ElevatedButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 15),
+                              backgroundColor: Colors.white,
+                              foregroundColor: Colors.black,
+                            ),
+                            child: const Text('VOLTAR', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
                 );
               },
               'ShopMenu': (BuildContext context, MyGame game) {
@@ -128,6 +201,61 @@ class MyApp extends StatelessWidget {
                                     setState(() {});
                                   },
                                 ),
+                                ShopShipCard(
+                                  imagePath: 'assets/images/ship4.png',
+                                  name: 'NAVE OURO',
+                                  price: MyGame.ship4Price,
+                                  owned: game.ownsShip4,
+                                  canBuy: game.canBuyShip4,
+                                  onBuy: () {
+                                    game.buyShip4();
+                                    setState(() {});
+                                  },
+                                ),
+                                ShopShipCard(
+                                  imagePath: 'assets/images/ship5.png',
+                                  name: 'NAVE VIOLETA',
+                                  price: MyGame.ship5Price,
+                                  owned: game.ownsShip5,
+                                  canBuy: game.canBuyShip5,
+                                  onBuy: () {
+                                    game.buyShip5();
+                                    setState(() {});
+                                  },
+                                ),
+                                ShopShipCard(
+                                  imagePath: 'assets/images/ship6.png',
+                                  name: 'NAVE NEBULA',
+                                  price: MyGame.ship6Price,
+                                  owned: game.ownsShip6,
+                                  canBuy: game.canBuyShip6,
+                                  onBuy: () {
+                                    game.buyShip6();
+                                    setState(() {});
+                                  },
+                                ),
+                                ShopShipCard(
+                                  imagePath: 'assets/images/ship7.png',
+                                  name: 'NAVE SOLAR',
+                                  price: MyGame.ship7Price,
+                                  owned: game.ownsShip7,
+                                  canBuy: game.canBuyShip7,
+                                  onBuy: () {
+                                    game.buyShip7();
+                                    setState(() {});
+                                  },
+                                ),
+                                ShopShipCard(
+                                  imagePath: 'assets/images/ship8.png',
+                                  name: 'NAVE COSMICA',
+                                  price: MyGame.ship8Price,
+                                  owned: game.ownsShip8,
+                                  canBuy: game.canBuyShip8,
+                                  onBuy: () {
+                                    game.buyShip8();
+                                    setState(() {});
+                                  },
+                                ),
                               ],
                             ),
                             const SizedBox(height: 30),
@@ -154,79 +282,13 @@ class MyApp extends StatelessWidget {
               'InventoryMenu': (BuildContext context, MyGame game) {
                 return StatefulBuilder(
                   builder: (context, setState) {
-                    return SingleChildScrollView(
-                      child: Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            const SizedBox(height: 20),
-                            const Text(
-                              'INVENTARIO',
-                              style: TextStyle(
-                                color: Colors.cyan,
-                                fontSize: 54,
-                                fontWeight: FontWeight.bold,
-                                shadows: [Shadow(blurRadius: 10, color: Colors.black)],
-                              ),
-                            ),
-                            const SizedBox(height: 30),
-                            Wrap(
-                              spacing: 20,
-                              runSpacing: 20,
-                              alignment: WrapAlignment.center,
-                              children: [
-                                InventoryShipCard(
-                                  imagePath: 'assets/images/ship.png',
-                                  assetName: 'ship.png',
-                                  name: 'NAVE PADRAO',
-                                  unlocked: true,
-                                  selected: game.selectedShipAsset == 'ship.png',
-                                  onSelect: () async {
-                                    await game.selectShip('ship.png');
-                                    setState(() {});
-                                  },
-                                ),
-                                InventoryShipCard(
-                                  imagePath: 'assets/images/ship1.png',
-                                  assetName: 'ship1.png',
-                                  name: 'NAVE CIANO',
-                                  unlocked: game.ownsShip1,
-                                  selected: game.selectedShipAsset == 'ship1.png',
-                                  onSelect: () async {
-                                    await game.selectShip('ship1.png');
-                                    setState(() {});
-                                  },
-                                ),
-                                InventoryShipCard(
-                                  imagePath: 'assets/images/ship3.png',
-                                  assetName: 'ship3.png',
-                                  name: 'NAVE RUBI',
-                                  unlocked: game.ownsShip3,
-                                  selected: game.selectedShipAsset == 'ship3.png',
-                                  onSelect: () async {
-                                    await game.selectShip('ship3.png');
-                                    setState(() {});
-                                  },
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 30),
-                            ElevatedButton(
-                              onPressed: () {
-                                game.overlays.remove('InventoryMenu');
-                                game.overlays.add('StartMenu');
-                              },
-                              style: ElevatedButton.styleFrom(
-                                padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 15),
-                                backgroundColor: Colors.white,
-                                foregroundColor: Colors.black,
-                              ),
-                              child: const Text('VOLTAR', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
-                            ),
-                            const SizedBox(height: 20),
-                          ],
-                        ),
-                      ),
+                    return InventoryMenuView(
+                      game: game,
+                      onChanged: () => setState(() {}),
+                      onBack: () {
+                        game.overlays.remove('InventoryMenu');
+                        game.overlays.add('StartMenu');
+                      },
                     );
                   },
                 );
@@ -396,54 +458,6 @@ class MyApp extends StatelessWidget {
   }
 }
 
-class AloneZLogo extends StatelessWidget {
-  const AloneZLogo({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Stack(
-      alignment: Alignment.center,
-      children: const [
-        Text(
-          'ALONE Z',
-          style: TextStyle(
-            color: Color(0xFF061018),
-            fontSize: 76,
-            fontWeight: FontWeight.w900,
-            letterSpacing: 4,
-            shadows: [
-              Shadow(blurRadius: 22, color: Colors.cyan, offset: Offset(0, 0)),
-              Shadow(blurRadius: 34, color: Colors.blue, offset: Offset(0, 0)),
-            ],
-          ),
-        ),
-        Text(
-          'ALONE Z',
-          style: TextStyle(
-            color: Colors.white,
-            fontSize: 72,
-            fontWeight: FontWeight.w900,
-            letterSpacing: 4,
-            shadows: [
-              Shadow(blurRadius: 4, color: Colors.black, offset: Offset(3, 3)),
-              Shadow(blurRadius: 14, color: Colors.cyan, offset: Offset(0, 0)),
-            ],
-          ),
-        ),
-        Text(
-          'ALONE Z',
-          style: TextStyle(
-            color: Colors.cyan,
-            fontSize: 72,
-            fontWeight: FontWeight.w900,
-            letterSpacing: 4,
-          ),
-        ),
-      ],
-    );
-  }
-}
-
 class CoinCounter extends StatelessWidget {
   final int value;
   final double fontSize;
@@ -496,6 +510,70 @@ class CoinCounter extends StatelessWidget {
   }
 }
 
+class MainMenuButton extends StatelessWidget {
+  final String label;
+  final IconData icon;
+  final bool primary;
+  final VoidCallback onPressed;
+
+  const MainMenuButton({
+    super.key,
+    required this.label,
+    required this.icon,
+    required this.onPressed,
+    this.primary = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final borderColor = primary ? const Color(0xFFFF4FBF) : const Color(0xFF5EDCFF);
+    final backgroundColor = primary ? const Color(0xCC5A063C) : const Color(0xCC061B36);
+    final iconColor = primary ? Colors.white : const Color(0xFF78E6FF);
+    final glowColor = primary ? const Color(0xA6FF4FBF) : const Color(0xA65EDCFF);
+
+    return Container(
+      width: 320,
+      height: primary ? 66 : 58,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(8),
+        boxShadow: [
+          BoxShadow(color: glowColor, blurRadius: 14, spreadRadius: 1),
+          const BoxShadow(color: Colors.black87, blurRadius: 10, offset: Offset(3, 4)),
+        ],
+      ),
+      child: ElevatedButton(
+        onPressed: onPressed,
+        style: ElevatedButton.styleFrom(
+          backgroundColor: backgroundColor,
+          foregroundColor: Colors.white,
+          padding: const EdgeInsets.symmetric(horizontal: 24),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(8),
+            side: BorderSide(color: borderColor, width: 3),
+          ),
+          elevation: 0,
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, color: iconColor, size: primary ? 36 : 30),
+            const SizedBox(width: 16),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: primary ? 30 : 24,
+                fontWeight: FontWeight.w900,
+                letterSpacing: 1.5,
+                shadows: const [Shadow(blurRadius: 8, color: Colors.black)],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class ShopShipCard extends StatelessWidget {
   final String imagePath;
   final String name;
@@ -520,12 +598,33 @@ class ShopShipCard extends StatelessWidget {
       padding: const EdgeInsets.all(16),
       width: 220,
       decoration: BoxDecoration(
-        color: Colors.black54,
-        border: Border.all(color: Colors.cyan, width: 2),
+        color: owned ? const Color(0xAA2A2100) : Colors.black54,
+        border: Border.all(color: owned ? Colors.amber : Colors.cyan, width: owned ? 3 : 2),
         borderRadius: BorderRadius.circular(8),
       ),
       child: Column(
         children: [
+          if (owned) ...[
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: Colors.amber,
+                borderRadius: BorderRadius.circular(20),
+                boxShadow: const [
+                  BoxShadow(color: Colors.black54, blurRadius: 8, offset: Offset(2, 2)),
+                ],
+              ),
+              child: const Text(
+                'JA COMPRADA',
+                style: TextStyle(
+                  color: Colors.black,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+            ),
+            const SizedBox(height: 10),
+          ],
           Image.asset(
             imagePath,
             width: 90,
@@ -543,22 +642,238 @@ class ShopShipCard extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 10),
-          CoinCounter(value: price, fontSize: 20),
+          owned
+              ? const Text(
+                  'Disponivel no inventario',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    shadows: [Shadow(blurRadius: 8, color: Colors.black)],
+                  ),
+                )
+              : CoinCounter(value: price, fontSize: 20),
           const SizedBox(height: 15),
-          ElevatedButton(
-            onPressed: canBuy ? onBuy : null,
-            style: ElevatedButton.styleFrom(
+          if (owned)
+            Container(
               padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 12),
-              backgroundColor: Colors.white,
-              foregroundColor: Colors.black,
+              decoration: BoxDecoration(
+                color: Colors.amber,
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: const Text(
+                'COMPRADA',
+                style: TextStyle(
+                  color: Colors.black,
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            )
+          else
+            ElevatedButton(
+              onPressed: canBuy ? onBuy : null,
+              style: ElevatedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 12),
+                backgroundColor: Colors.white,
+                foregroundColor: Colors.black,
+              ),
+              child: const Text(
+                'COMPRAR',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
             ),
-            child: Text(
-              owned ? 'COMPRADA' : 'COMPRAR',
-              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-          ),
         ],
       ),
+    );
+  }
+}
+
+class InventoryMenuView extends StatelessWidget {
+  final MyGame game;
+  final VoidCallback onChanged;
+  final VoidCallback onBack;
+
+  const InventoryMenuView({
+    super.key,
+    required this.game,
+    required this.onChanged,
+    required this.onBack,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      children: [
+        Positioned.fill(
+          child: Container(color: const Color(0xCC020712)),
+        ),
+        SingleChildScrollView(
+          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 20),
+          child: Center(
+            child: Column(
+              children: [
+                const Text(
+                  'INVENTARIO',
+                  style: TextStyle(
+                    color: Colors.cyan,
+                    fontSize: 54,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: 2,
+                    shadows: [
+                      Shadow(blurRadius: 12, color: Colors.black),
+                      Shadow(blurRadius: 18, color: Colors.cyan),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Container(
+                  width: 320,
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: const Color(0xCC071B38),
+                    border: Border.all(color: Colors.amber, width: 2),
+                    borderRadius: BorderRadius.circular(8),
+                    boxShadow: const [
+                      BoxShadow(color: Colors.black87, blurRadius: 14, offset: Offset(3, 4)),
+                    ],
+                  ),
+                  child: Column(
+                    children: [
+                      const Text(
+                        'NAVE EQUIPADA',
+                        style: TextStyle(
+                          color: Colors.amber,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: 2,
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      Image.asset(
+                        'assets/images/${game.selectedShipAsset}',
+                        width: 110,
+                        height: 110,
+                        fit: BoxFit.contain,
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 24),
+                Wrap(
+                  spacing: 18,
+                  runSpacing: 18,
+                  alignment: WrapAlignment.center,
+                  children: [
+                    InventoryShipCard(
+                      imagePath: 'assets/images/ship.png',
+                      assetName: 'ship.png',
+                      name: 'NAVE PADRAO',
+                      unlocked: true,
+                      selected: game.selectedShipAsset == 'ship.png',
+                      onSelect: () async {
+                        await game.selectShip('ship.png');
+                        onChanged();
+                      },
+                    ),
+                    InventoryShipCard(
+                      imagePath: 'assets/images/ship1.png',
+                      assetName: 'ship1.png',
+                      name: 'NAVE CIANO',
+                      unlocked: game.ownsShip1,
+                      selected: game.selectedShipAsset == 'ship1.png',
+                      onSelect: () async {
+                        await game.selectShip('ship1.png');
+                        onChanged();
+                      },
+                    ),
+                    InventoryShipCard(
+                      imagePath: 'assets/images/ship3.png',
+                      assetName: 'ship3.png',
+                      name: 'NAVE RUBI',
+                      unlocked: game.ownsShip3,
+                      selected: game.selectedShipAsset == 'ship3.png',
+                      onSelect: () async {
+                        await game.selectShip('ship3.png');
+                        onChanged();
+                      },
+                    ),
+                    InventoryShipCard(
+                      imagePath: 'assets/images/ship4.png',
+                      assetName: 'ship4.png',
+                      name: 'NAVE OURO',
+                      unlocked: game.ownsShip4,
+                      selected: game.selectedShipAsset == 'ship4.png',
+                      onSelect: () async {
+                        await game.selectShip('ship4.png');
+                        onChanged();
+                      },
+                    ),
+                    InventoryShipCard(
+                      imagePath: 'assets/images/ship5.png',
+                      assetName: 'ship5.png',
+                      name: 'NAVE VIOLETA',
+                      unlocked: game.ownsShip5,
+                      selected: game.selectedShipAsset == 'ship5.png',
+                      onSelect: () async {
+                        await game.selectShip('ship5.png');
+                        onChanged();
+                      },
+                    ),
+                    InventoryShipCard(
+                      imagePath: 'assets/images/ship6.png',
+                      assetName: 'ship6.png',
+                      name: 'NAVE NEBULA',
+                      unlocked: game.ownsShip6,
+                      selected: game.selectedShipAsset == 'ship6.png',
+                      onSelect: () async {
+                        await game.selectShip('ship6.png');
+                        onChanged();
+                      },
+                    ),
+                    InventoryShipCard(
+                      imagePath: 'assets/images/ship7.png',
+                      assetName: 'ship7.png',
+                      name: 'NAVE SOLAR',
+                      unlocked: game.ownsShip7,
+                      selected: game.selectedShipAsset == 'ship7.png',
+                      onSelect: () async {
+                        await game.selectShip('ship7.png');
+                        onChanged();
+                      },
+                    ),
+                    InventoryShipCard(
+                      imagePath: 'assets/images/ship8.png',
+                      assetName: 'ship8.png',
+                      name: 'NAVE COSMICA',
+                      unlocked: game.ownsShip8,
+                      selected: game.selectedShipAsset == 'ship8.png',
+                      onSelect: () async {
+                        await game.selectShip('ship8.png');
+                        onChanged();
+                      },
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 28),
+                ElevatedButton(
+                  onPressed: onBack,
+                  style: ElevatedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(horizontal: 44, vertical: 15),
+                    backgroundColor: Colors.white,
+                    foregroundColor: Colors.black,
+                  ),
+                  child: const Text(
+                    'VOLTAR',
+                    style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                  ),
+                ),
+                const SizedBox(height: 20),
+              ],
+            ),
+          ),
+        ),
+      ],
     );
   }
 }
@@ -583,25 +898,68 @@ class InventoryShipCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final borderColor = selected
+        ? Colors.amber
+        : unlocked
+            ? Colors.cyan
+            : Colors.white24;
+    final backgroundColor = selected
+        ? const Color(0xAA2A2100)
+        : unlocked
+            ? const Color(0xCC071B38)
+            : const Color(0xAA05070D);
+
     return Container(
       padding: const EdgeInsets.all(16),
       width: 220,
       decoration: BoxDecoration(
-        color: Colors.black54,
+        color: backgroundColor,
         border: Border.all(
-          color: selected ? Colors.amber : Colors.cyan,
+          color: borderColor,
           width: selected ? 3 : 2,
         ),
         borderRadius: BorderRadius.circular(8),
+        boxShadow: [
+          if (selected)
+            const BoxShadow(color: Color(0x99FFC107), blurRadius: 16, spreadRadius: 1),
+          const BoxShadow(color: Colors.black87, blurRadius: 12, offset: Offset(3, 4)),
+        ],
       ),
       child: Column(
         children: [
+          Align(
+            alignment: Alignment.topRight,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: selected
+                    ? Colors.amber
+                    : unlocked
+                        ? Colors.cyan
+                        : Colors.white24,
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Text(
+                selected
+                    ? 'EQUIPADA'
+                    : unlocked
+                        ? 'LIBERADA'
+                        : 'LOCK',
+                style: TextStyle(
+                  color: selected || unlocked ? Colors.black : Colors.white70,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 8),
           Opacity(
             opacity: unlocked ? 1 : 0.35,
             child: Image.asset(
               imagePath,
-              width: 90,
-              height: 90,
+              width: 104,
+              height: 104,
               fit: BoxFit.contain,
             ),
           ),
@@ -620,11 +978,11 @@ class InventoryShipCard extends StatelessWidget {
             onPressed: unlocked && !selected ? onSelect : null,
             style: ElevatedButton.styleFrom(
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-              backgroundColor: Colors.white,
+              backgroundColor: selected ? Colors.amber : Colors.white,
               foregroundColor: Colors.black,
             ),
             child: Text(
-              selected ? 'USANDO' : unlocked ? 'USAR' : 'BLOQUEADA',
+              selected ? 'USANDO' : unlocked ? 'EQUIPAR' : 'BLOQUEADA',
               style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
           ),
@@ -638,6 +996,11 @@ class MyGame extends FlameGame
     with KeyboardEvents, PanDetector, TapDetector, HasCollisionDetection {
   static const int ship1Price = 50;
   static const int ship3Price = 100;
+  static const int ship4Price = 150;
+  static const int ship5Price = 200;
+  static const int ship6Price = 250;
+  static const int ship7Price = 300;
+  static const int ship8Price = 350;
 
   late Player player;
   final List<Enemy> enemies = [];
@@ -657,6 +1020,11 @@ class MyGame extends FlameGame
   bool matchCoinsSaved = false;
   bool ownsShip1 = false;
   bool ownsShip3 = false;
+  bool ownsShip4 = false;
+  bool ownsShip5 = false;
+  bool ownsShip6 = false;
+  bool ownsShip7 = false;
+  bool ownsShip8 = false;
   String selectedShipAsset = 'ship.png';
 
   MyGame({required this.padding});
@@ -677,6 +1045,11 @@ class MyGame extends FlameGame
     coins = prefs.getInt('coins') ?? 0;
     ownsShip1 = prefs.getBool('ownsShip1') ?? false;
     ownsShip3 = prefs.getBool('ownsShip3') ?? false;
+    ownsShip4 = prefs.getBool('ownsShip4') ?? false;
+    ownsShip5 = prefs.getBool('ownsShip5') ?? false;
+    ownsShip6 = prefs.getBool('ownsShip6') ?? false;
+    ownsShip7 = prefs.getBool('ownsShip7') ?? false;
+    ownsShip8 = prefs.getBool('ownsShip8') ?? false;
     selectedShipAsset = prefs.getString('selectedShipAsset') ?? 'ship.png';
     if (!isShipUnlocked(selectedShipAsset)) {
       selectedShipAsset = 'ship.png';
@@ -854,11 +1227,21 @@ class MyGame extends FlameGame
 
   bool get canBuyShip1 => !ownsShip1 && coins >= ship1Price;
   bool get canBuyShip3 => !ownsShip3 && coins >= ship3Price;
+  bool get canBuyShip4 => !ownsShip4 && coins >= ship4Price;
+  bool get canBuyShip5 => !ownsShip5 && coins >= ship5Price;
+  bool get canBuyShip6 => !ownsShip6 && coins >= ship6Price;
+  bool get canBuyShip7 => !ownsShip7 && coins >= ship7Price;
+  bool get canBuyShip8 => !ownsShip8 && coins >= ship8Price;
 
   bool isShipUnlocked(String assetName) {
     if (assetName == 'ship.png') return true;
     if (assetName == 'ship1.png') return ownsShip1;
     if (assetName == 'ship3.png') return ownsShip3;
+    if (assetName == 'ship4.png') return ownsShip4;
+    if (assetName == 'ship5.png') return ownsShip5;
+    if (assetName == 'ship6.png') return ownsShip6;
+    if (assetName == 'ship7.png') return ownsShip7;
+    if (assetName == 'ship8.png') return ownsShip8;
     return false;
   }
 
@@ -888,6 +1271,56 @@ class MyGame extends FlameGame
     ownsShip3 = true;
     prefs.setInt('coins', coins);
     prefs.setBool('ownsShip3', ownsShip3);
+    return true;
+  }
+
+  bool buyShip4() {
+    if (!canBuyShip4) return false;
+
+    coins -= ship4Price;
+    ownsShip4 = true;
+    prefs.setInt('coins', coins);
+    prefs.setBool('ownsShip4', ownsShip4);
+    return true;
+  }
+
+  bool buyShip5() {
+    if (!canBuyShip5) return false;
+
+    coins -= ship5Price;
+    ownsShip5 = true;
+    prefs.setInt('coins', coins);
+    prefs.setBool('ownsShip5', ownsShip5);
+    return true;
+  }
+
+  bool buyShip6() {
+    if (!canBuyShip6) return false;
+
+    coins -= ship6Price;
+    ownsShip6 = true;
+    prefs.setInt('coins', coins);
+    prefs.setBool('ownsShip6', ownsShip6);
+    return true;
+  }
+
+  bool buyShip7() {
+    if (!canBuyShip7) return false;
+
+    coins -= ship7Price;
+    ownsShip7 = true;
+    prefs.setInt('coins', coins);
+    prefs.setBool('ownsShip7', ownsShip7);
+    return true;
+  }
+
+  bool buyShip8() {
+    if (!canBuyShip8) return false;
+
+    coins -= ship8Price;
+    ownsShip8 = true;
+    prefs.setInt('coins', coins);
+    prefs.setBool('ownsShip8', ownsShip8);
     return true;
   }
 
@@ -977,6 +1410,8 @@ class MyGame extends FlameGame
     children.whereType<Bullet>().forEach((bullet) => bullet.removeFromParent());
     children.whereType<PlayerBullet>().forEach((bullet) => bullet.removeFromParent());
     children.whereType<Explosion>().forEach((explosion) => explosion.removeFromParent());
+    children.whereType<HeartPowerup>().forEach((heart) => heart.removeFromParent());
+    children.whereType<WeaponPowerup>().forEach((powerup) => powerup.removeFromParent());
     
     enemies.clear();
     spawnLevel();
