@@ -33,15 +33,9 @@ class MyApp extends StatelessWidget {
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const Text(
-                        'ALONE Z',
-                        style: TextStyle(
-                          color: Colors.cyan,
-                          fontSize: 72,
-                          fontWeight: FontWeight.bold,
-                          shadows: [Shadow(blurRadius: 10, color: Colors.black)],
-                        ),
-                      ),
+                      const AloneZLogo(),
+                      const SizedBox(height: 20),
+                      CoinCounter(value: game.coins, fontSize: 28),
                       const SizedBox(height: 40),
                       ElevatedButton(
                         onPressed: () {
@@ -54,10 +48,187 @@ class MyApp extends StatelessWidget {
                           backgroundColor: Colors.white,
                           foregroundColor: Colors.black,
                         ),
-                        child: const Text('START GAME', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+                        child: const Text('PLAY', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+                      ),
+                      const SizedBox(height: 20),
+                      ElevatedButton(
+                        onPressed: () {
+                          game.overlays.remove('StartMenu');
+                          game.overlays.add('ShopMenu');
+                        },
+                        style: ElevatedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 15),
+                          backgroundColor: Colors.white,
+                          foregroundColor: Colors.black,
+                        ),
+                        child: const Text('LOJA', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+                      ),
+                      const SizedBox(height: 20),
+                      ElevatedButton(
+                        onPressed: () {
+                          game.overlays.remove('StartMenu');
+                          game.overlays.add('InventoryMenu');
+                        },
+                        style: ElevatedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 15),
+                          backgroundColor: Colors.white,
+                          foregroundColor: Colors.black,
+                        ),
+                        child: const Text('INVENTARIO', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
                       ),
                     ],
                   ),
+                );
+              },
+              'ShopMenu': (BuildContext context, MyGame game) {
+                return StatefulBuilder(
+                  builder: (context, setState) {
+                    return SingleChildScrollView(
+                      child: Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const SizedBox(height: 20),
+                            const Text(
+                              'LOJA',
+                              style: TextStyle(
+                                color: Colors.cyan,
+                                fontSize: 64,
+                                fontWeight: FontWeight.bold,
+                                shadows: [Shadow(blurRadius: 10, color: Colors.black)],
+                              ),
+                            ),
+                            const SizedBox(height: 20),
+                            CoinCounter(value: game.coins, fontSize: 28),
+                            const SizedBox(height: 30),
+                            Wrap(
+                              spacing: 20,
+                              runSpacing: 20,
+                              alignment: WrapAlignment.center,
+                              children: [
+                                ShopShipCard(
+                                  imagePath: 'assets/images/ship1.png',
+                                  name: 'NAVE CIANO',
+                                  price: MyGame.ship1Price,
+                                  owned: game.ownsShip1,
+                                  canBuy: game.canBuyShip1,
+                                  onBuy: () {
+                                    game.buyShip1();
+                                    setState(() {});
+                                  },
+                                ),
+                                ShopShipCard(
+                                  imagePath: 'assets/images/ship3.png',
+                                  name: 'NAVE RUBI',
+                                  price: MyGame.ship3Price,
+                                  owned: game.ownsShip3,
+                                  canBuy: game.canBuyShip3,
+                                  onBuy: () {
+                                    game.buyShip3();
+                                    setState(() {});
+                                  },
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 30),
+                            ElevatedButton(
+                              onPressed: () {
+                                game.overlays.remove('ShopMenu');
+                                game.overlays.add('StartMenu');
+                              },
+                              style: ElevatedButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 15),
+                                backgroundColor: Colors.white,
+                                foregroundColor: Colors.black,
+                              ),
+                              child: const Text('VOLTAR', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+                            ),
+                            const SizedBox(height: 20),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                );
+              },
+              'InventoryMenu': (BuildContext context, MyGame game) {
+                return StatefulBuilder(
+                  builder: (context, setState) {
+                    return SingleChildScrollView(
+                      child: Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const SizedBox(height: 20),
+                            const Text(
+                              'INVENTARIO',
+                              style: TextStyle(
+                                color: Colors.cyan,
+                                fontSize: 54,
+                                fontWeight: FontWeight.bold,
+                                shadows: [Shadow(blurRadius: 10, color: Colors.black)],
+                              ),
+                            ),
+                            const SizedBox(height: 30),
+                            Wrap(
+                              spacing: 20,
+                              runSpacing: 20,
+                              alignment: WrapAlignment.center,
+                              children: [
+                                InventoryShipCard(
+                                  imagePath: 'assets/images/ship.png',
+                                  assetName: 'ship.png',
+                                  name: 'NAVE PADRAO',
+                                  unlocked: true,
+                                  selected: game.selectedShipAsset == 'ship.png',
+                                  onSelect: () async {
+                                    await game.selectShip('ship.png');
+                                    setState(() {});
+                                  },
+                                ),
+                                InventoryShipCard(
+                                  imagePath: 'assets/images/ship1.png',
+                                  assetName: 'ship1.png',
+                                  name: 'NAVE CIANO',
+                                  unlocked: game.ownsShip1,
+                                  selected: game.selectedShipAsset == 'ship1.png',
+                                  onSelect: () async {
+                                    await game.selectShip('ship1.png');
+                                    setState(() {});
+                                  },
+                                ),
+                                InventoryShipCard(
+                                  imagePath: 'assets/images/ship3.png',
+                                  assetName: 'ship3.png',
+                                  name: 'NAVE RUBI',
+                                  unlocked: game.ownsShip3,
+                                  selected: game.selectedShipAsset == 'ship3.png',
+                                  onSelect: () async {
+                                    await game.selectShip('ship3.png');
+                                    setState(() {});
+                                  },
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 30),
+                            ElevatedButton(
+                              onPressed: () {
+                                game.overlays.remove('InventoryMenu');
+                                game.overlays.add('StartMenu');
+                              },
+                              style: ElevatedButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 15),
+                                backgroundColor: Colors.white,
+                                foregroundColor: Colors.black,
+                              ),
+                              child: const Text('VOLTAR', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+                            ),
+                            const SizedBox(height: 20),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
                 );
               },
               'GameOver': (BuildContext context, MyGame game) {
@@ -86,6 +257,18 @@ class MyApp extends StatelessWidget {
                           foregroundColor: Colors.black,
                         ),
                         child: const Text('Restart', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+                      ),
+                      const SizedBox(height: 20),
+                      ElevatedButton(
+                        onPressed: () {
+                          game.backToMenu();
+                        },
+                        style: ElevatedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 15),
+                          backgroundColor: Colors.white,
+                          foregroundColor: Colors.black,
+                        ),
+                        child: const Text('MENU', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
                       ),
                     ],
                   ),
@@ -135,6 +318,72 @@ class MyApp extends StatelessWidget {
                         ),
                         child: const Text('RESUME', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
                       ),
+                      const SizedBox(height: 20),
+                      ElevatedButton(
+                        onPressed: () {
+                          game.overlays.remove('PauseMenu');
+                          game.overlays.add('ConfirmBackToMenu');
+                        },
+                        style: ElevatedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 15),
+                          backgroundColor: Colors.white,
+                          foregroundColor: Colors.black,
+                        ),
+                        child: const Text('MENU', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+                      ),
+                    ],
+                  ),
+                );
+              },
+              'ConfirmBackToMenu': (BuildContext context, MyGame game) {
+                return Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Text(
+                        'VOLTAR AO MENU?',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 48,
+                          fontWeight: FontWeight.bold,
+                          shadows: [Shadow(blurRadius: 10, color: Colors.black)],
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+                      const Text(
+                        'Voce vai perder o progresso da partida atual.',
+                        style: TextStyle(
+                          color: Colors.amber,
+                          fontSize: 22,
+                          fontWeight: FontWeight.bold,
+                          shadows: [Shadow(blurRadius: 8, color: Colors.black)],
+                        ),
+                      ),
+                      const SizedBox(height: 40),
+                      ElevatedButton(
+                        onPressed: () {
+                          game.backToMenu();
+                        },
+                        style: ElevatedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 15),
+                          backgroundColor: Colors.white,
+                          foregroundColor: Colors.black,
+                        ),
+                        child: const Text('CONFIRMAR', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+                      ),
+                      const SizedBox(height: 20),
+                      ElevatedButton(
+                        onPressed: () {
+                          game.overlays.remove('ConfirmBackToMenu');
+                          game.overlays.add('PauseMenu');
+                        },
+                        style: ElevatedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 15),
+                          backgroundColor: Colors.white,
+                          foregroundColor: Colors.black,
+                        ),
+                        child: const Text('CANCELAR', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+                      ),
                     ],
                   ),
                 );
@@ -147,11 +396,253 @@ class MyApp extends StatelessWidget {
   }
 }
 
+class AloneZLogo extends StatelessWidget {
+  const AloneZLogo({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      alignment: Alignment.center,
+      children: const [
+        Text(
+          'ALONE Z',
+          style: TextStyle(
+            color: Color(0xFF061018),
+            fontSize: 76,
+            fontWeight: FontWeight.w900,
+            letterSpacing: 4,
+            shadows: [
+              Shadow(blurRadius: 22, color: Colors.cyan, offset: Offset(0, 0)),
+              Shadow(blurRadius: 34, color: Colors.blue, offset: Offset(0, 0)),
+            ],
+          ),
+        ),
+        Text(
+          'ALONE Z',
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: 72,
+            fontWeight: FontWeight.w900,
+            letterSpacing: 4,
+            shadows: [
+              Shadow(blurRadius: 4, color: Colors.black, offset: Offset(3, 3)),
+              Shadow(blurRadius: 14, color: Colors.cyan, offset: Offset(0, 0)),
+            ],
+          ),
+        ),
+        Text(
+          'ALONE Z',
+          style: TextStyle(
+            color: Colors.cyan,
+            fontSize: 72,
+            fontWeight: FontWeight.w900,
+            letterSpacing: 4,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class CoinCounter extends StatelessWidget {
+  final int value;
+  final double fontSize;
+
+  const CoinCounter({
+    super.key,
+    required this.value,
+    this.fontSize = 24,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final coinSize = fontSize + 10;
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: coinSize,
+          height: coinSize,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: Colors.amber,
+            border: Border.all(color: Colors.white, width: 2),
+            boxShadow: const [
+              BoxShadow(color: Colors.black54, blurRadius: 8, offset: Offset(2, 2)),
+            ],
+          ),
+          child: Text(
+            'C',
+            style: TextStyle(
+              color: Colors.black,
+              fontSize: fontSize * 0.7,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+        ),
+        const SizedBox(width: 10),
+        Text(
+          '$value',
+          style: TextStyle(
+            color: Colors.amber,
+            fontSize: fontSize,
+            fontWeight: FontWeight.bold,
+            shadows: const [Shadow(blurRadius: 8, color: Colors.black)],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class ShopShipCard extends StatelessWidget {
+  final String imagePath;
+  final String name;
+  final int price;
+  final bool owned;
+  final bool canBuy;
+  final VoidCallback onBuy;
+
+  const ShopShipCard({
+    super.key,
+    required this.imagePath,
+    required this.name,
+    required this.price,
+    required this.owned,
+    required this.canBuy,
+    required this.onBuy,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      width: 220,
+      decoration: BoxDecoration(
+        color: Colors.black54,
+        border: Border.all(color: Colors.cyan, width: 2),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Column(
+        children: [
+          Image.asset(
+            imagePath,
+            width: 90,
+            height: 90,
+            fit: BoxFit.contain,
+          ),
+          const SizedBox(height: 10),
+          Text(
+            name,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              shadows: [Shadow(blurRadius: 8, color: Colors.black)],
+            ),
+          ),
+          const SizedBox(height: 10),
+          CoinCounter(value: price, fontSize: 20),
+          const SizedBox(height: 15),
+          ElevatedButton(
+            onPressed: canBuy ? onBuy : null,
+            style: ElevatedButton.styleFrom(
+              padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 12),
+              backgroundColor: Colors.white,
+              foregroundColor: Colors.black,
+            ),
+            child: Text(
+              owned ? 'COMPRADA' : 'COMPRAR',
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class InventoryShipCard extends StatelessWidget {
+  final String imagePath;
+  final String assetName;
+  final String name;
+  final bool unlocked;
+  final bool selected;
+  final Future<void> Function() onSelect;
+
+  const InventoryShipCard({
+    super.key,
+    required this.imagePath,
+    required this.assetName,
+    required this.name,
+    required this.unlocked,
+    required this.selected,
+    required this.onSelect,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      width: 220,
+      decoration: BoxDecoration(
+        color: Colors.black54,
+        border: Border.all(
+          color: selected ? Colors.amber : Colors.cyan,
+          width: selected ? 3 : 2,
+        ),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Column(
+        children: [
+          Opacity(
+            opacity: unlocked ? 1 : 0.35,
+            child: Image.asset(
+              imagePath,
+              width: 90,
+              height: 90,
+              fit: BoxFit.contain,
+            ),
+          ),
+          const SizedBox(height: 10),
+          Text(
+            name,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              shadows: [Shadow(blurRadius: 8, color: Colors.black)],
+            ),
+          ),
+          const SizedBox(height: 15),
+          ElevatedButton(
+            onPressed: unlocked && !selected ? onSelect : null,
+            style: ElevatedButton.styleFrom(
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+              backgroundColor: Colors.white,
+              foregroundColor: Colors.black,
+            ),
+            child: Text(
+              selected ? 'USANDO' : unlocked ? 'USAR' : 'BLOQUEADA',
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class MyGame extends FlameGame
     with KeyboardEvents, PanDetector, TapDetector, HasCollisionDetection {
+  static const int ship1Price = 50;
+  static const int ship3Price = 100;
+
   late Player player;
   final List<Enemy> enemies = [];
   late TextComponent livesText;
+  late TextComponent matchCoinsText;
   late TextComponent scoreText;
   late TextComponent levelText;
   late TextComponent highScoreText;
@@ -159,8 +650,14 @@ class MyGame extends FlameGame
   late EdgeInsets padding;
   bool isGameOver = false;
   int score = 0;
+  int coins = 0;
+  int matchCoins = 0;
   int highScore = 0;
   int currentLevel = 1;
+  bool matchCoinsSaved = false;
+  bool ownsShip1 = false;
+  bool ownsShip3 = false;
+  String selectedShipAsset = 'ship.png';
 
   MyGame({required this.padding});
 
@@ -177,6 +674,14 @@ class MyGame extends FlameGame
     // Carrega o high score
     prefs = await SharedPreferences.getInstance();
     highScore = prefs.getInt('highScore') ?? 0;
+    coins = prefs.getInt('coins') ?? 0;
+    ownsShip1 = prefs.getBool('ownsShip1') ?? false;
+    ownsShip3 = prefs.getBool('ownsShip3') ?? false;
+    selectedShipAsset = prefs.getString('selectedShipAsset') ?? 'ship.png';
+    if (!isShipUnlocked(selectedShipAsset)) {
+      selectedShipAsset = 'ship.png';
+      prefs.setString('selectedShipAsset', selectedShipAsset);
+    }
 
     // Preload audio
     try {
@@ -191,6 +696,7 @@ class MyGame extends FlameGame
     add(background);
 
     player = Player();
+    player.shipAsset = selectedShipAsset;
     player.gameSize = size;
     player.position = Vector2(
       size.x / 2 - Player.playerSize / 2,
@@ -222,6 +728,22 @@ class MyGame extends FlameGame
       ),
     );
     add(livesText);
+
+    matchCoinsText = TextComponent(
+      text: 'C $matchCoins',
+      position: Vector2(15, 45),
+      textRenderer: TextPaint(
+        style: const TextStyle(
+          color: Colors.amber,
+          fontSize: 20,
+          fontWeight: FontWeight.bold,
+          shadows: [
+            Shadow(blurRadius: 4.0, color: Colors.black, offset: Offset(2, 2)),
+          ],
+        ),
+      ),
+    );
+    add(matchCoinsText);
 
     scoreText = TextComponent(
       text: 'SCORE: $score',
@@ -326,6 +848,53 @@ class MyGame extends FlameGame
     }
   }
 
+  void updateCoins() {
+    prefs.setInt('coins', coins);
+  }
+
+  bool get canBuyShip1 => !ownsShip1 && coins >= ship1Price;
+  bool get canBuyShip3 => !ownsShip3 && coins >= ship3Price;
+
+  bool isShipUnlocked(String assetName) {
+    if (assetName == 'ship.png') return true;
+    if (assetName == 'ship1.png') return ownsShip1;
+    if (assetName == 'ship3.png') return ownsShip3;
+    return false;
+  }
+
+  Future<void> selectShip(String assetName) async {
+    if (!isShipUnlocked(assetName)) return;
+
+    selectedShipAsset = assetName;
+    prefs.setString('selectedShipAsset', selectedShipAsset);
+    player.shipAsset = selectedShipAsset;
+    player.sprite = await Sprite.load(selectedShipAsset);
+  }
+
+  bool buyShip1() {
+    if (!canBuyShip1) return false;
+
+    coins -= ship1Price;
+    ownsShip1 = true;
+    prefs.setInt('coins', coins);
+    prefs.setBool('ownsShip1', ownsShip1);
+    return true;
+  }
+
+  bool buyShip3() {
+    if (!canBuyShip3) return false;
+
+    coins -= ship3Price;
+    ownsShip3 = true;
+    prefs.setInt('coins', coins);
+    prefs.setBool('ownsShip3', ownsShip3);
+    return true;
+  }
+
+  void updateMatchCoins() {
+    matchCoinsText.text = 'C $matchCoins';
+  }
+
   void updateLevel() {
     levelText.text = 'LEVEL: $currentLevel';
   }
@@ -369,20 +938,33 @@ class MyGame extends FlameGame
   void gameOver() {
     if (isGameOver) return;
     isGameOver = true;
+    saveMatchCoins();
     overlays.remove('PauseButton');
     overlays.add('GameOver');
     pauseEngine();
   }
 
+  void saveMatchCoins() {
+    if (matchCoinsSaved) return;
+    coins += matchCoins;
+    matchCoins = 0;
+    matchCoinsSaved = true;
+    updateCoins();
+    updateMatchCoins();
+  }
+
   void restart() {
     isGameOver = false;
     score = 0;
+    matchCoins = 0;
+    matchCoinsSaved = false;
     currentLevel = 1;
     player.lives = 3;
     player.hitCount = 0;
     player.weaponLevel = 1;
     player.shootInterval = 1.0;
     updateScore();
+    updateMatchCoins();
     updateLevel();
     updateLives();
     
@@ -401,12 +983,52 @@ class MyGame extends FlameGame
     overlays.add('PauseButton');
     resumeEngine();
   }
+
+  void backToMenu() {
+    isGameOver = false;
+    score = 0;
+    matchCoins = 0;
+    matchCoinsSaved = false;
+    currentLevel = 1;
+    player.lives = 3;
+    player.hitCount = 0;
+    player.weaponLevel = 1;
+    player.shootInterval = 1.0;
+    updateScore();
+    updateLevel();
+    updateLives();
+    updateCoins();
+    updateMatchCoins();
+
+    player.position = Vector2(
+      size.x / 2 - Player.playerSize / 2,
+      size.y - Player.playerSize - 20,
+    );
+
+    children.whereType<Enemy>().forEach((enemy) => enemy.removeFromParent());
+    children.whereType<Bullet>().forEach((bullet) => bullet.removeFromParent());
+    children.whereType<PlayerBullet>().forEach((bullet) => bullet.removeFromParent());
+    children.whereType<Explosion>().forEach((explosion) => explosion.removeFromParent());
+    children.whereType<HeartPowerup>().forEach((heart) => heart.removeFromParent());
+    children.whereType<WeaponPowerup>().forEach((powerup) => powerup.removeFromParent());
+
+    enemies.clear();
+    spawnLevel();
+
+    overlays.remove('PauseMenu');
+    overlays.remove('ConfirmBackToMenu');
+    overlays.remove('PauseButton');
+    overlays.remove('GameOver');
+    overlays.add('StartMenu');
+    pauseEngine();
+  }
 }
 
 class Player extends SpriteComponent with CollisionCallbacks {
   static const double speed = 200.0;
   static const double playerSize = 50.0;
 
+  String shipAsset = 'ship.png';
   bool isMovingLeft = false;
   bool isMovingRight = false;
   bool isMovingUp = false;
@@ -422,7 +1044,7 @@ class Player extends SpriteComponent with CollisionCallbacks {
   @override
   Future<void> onLoad() async {
     await super.onLoad();
-    sprite = await Sprite.load('ship.png');
+    sprite = await Sprite.load(shipAsset);
     size = Vector2.all(playerSize);
     add(CircleHitbox());
   }
@@ -557,7 +1179,9 @@ class PlayerBullet extends PositionComponent with CollisionCallbacks {
         (parent as MyGame).enemies.remove(other);
         final game = parent as MyGame;
         game.score += 10; // Add score
+        game.matchCoins += 1; // Add one coin for this match per defeated enemy
         game.updateScore();
+        game.updateMatchCoins();
         
         // Check for extra life every 100 score
         if (game.score > 0 && game.score % 100 == 0) {
