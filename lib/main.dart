@@ -41,16 +41,16 @@ class MyApp extends StatelessWidget {
                       child: Container(color: const Color(0x66000000)),
                     ),
                     Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Image.asset(
-                        'assets/images/alonez.png',
-                        width: 320,
-                        fit: BoxFit.contain,
-                      ),
-                      const SizedBox(height: 20),
-                      CoinCounter(value: game.coins, fontSize: 28),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Image.asset(
+                            'assets/images/alonez.png',
+                            width: 320,
+                            fit: BoxFit.contain,
+                          ),
+                          const SizedBox(height: 20),
+                          CoinCounter(value: game.coins, fontSize: 28),
                           const SizedBox(height: 40),
                           MainMenuButton(
                             label: 'PLAY',
@@ -89,10 +89,107 @@ class MyApp extends StatelessWidget {
                               game.overlays.add('FreeCoinsMenu');
                             },
                           ),
-                    ],
-                  ),
+                          const SizedBox(height: 20),
+                          MainMenuButton(
+                            label: 'MISSOES',
+                            icon: Icons.star,
+                            onPressed: () {
+                              game.overlays.remove('StartMenu');
+                              game.overlays.add('MissionsMenu');
+                            },
+                          ),
+                        ],
+                      ),
                     ),
                   ],
+                );
+              },
+              'MissionsMenu': (BuildContext context, MyGame game) {
+                return StatefulBuilder(
+                  builder: (context, setState) {
+                    return Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Text(
+                            'MISSOES',
+                            style: TextStyle(
+                              color: Colors.cyan,
+                              fontSize: 54,
+                              fontWeight: FontWeight.bold,
+                              shadows: [
+                                Shadow(blurRadius: 10, color: Colors.black),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 30),
+                          MissionCard(
+                            icon: Icons.local_fire_department,
+                            title: 'DESTRUA 100 INIMIGOS',
+                            progressText: game.destroyEnemiesMissionText,
+                            color: Colors.pinkAccent,
+                            actionText: game.canClaimDestroyEnemiesMission
+                                ? 'RESGATAR C ${MyGame.destroyEnemiesMissionReward}'
+                                : null,
+                            onAction: () {
+                              game.claimDestroyEnemiesMission();
+                              setState(() {});
+                            },
+                          ),
+                          const SizedBox(height: 14),
+                          MissionCard(
+                            icon: Icons.military_tech,
+                            title: 'ALCANCE O LEVEL 20',
+                            progressText: game.reachLevelMissionText,
+                            color: Colors.lightBlueAccent,
+                            actionText: game.canClaimReachLevelMission
+                                ? 'RESGATAR C ${MyGame.reachLevelMissionReward}'
+                                : null,
+                            onAction: () {
+                              game.claimReachLevelMission();
+                              setState(() {});
+                            },
+                          ),
+                          const SizedBox(height: 14),
+                          MissionCard(
+                            icon: Icons.emoji_events,
+                            title: 'BATA SEU HI-SCORE',
+                            progressText: game.beatHighScoreMissionText,
+                            color: Colors.amber,
+                            actionText: game.canClaimBeatHighScoreMission
+                                ? 'RESGATAR C ${MyGame.beatHighScoreMissionReward}'
+                                : null,
+                            onAction: () {
+                              game.claimBeatHighScoreMission();
+                              setState(() {});
+                            },
+                          ),
+                          const SizedBox(height: 30),
+                          ElevatedButton(
+                            onPressed: () {
+                              game.overlays.remove('MissionsMenu');
+                              game.overlays.add('StartMenu');
+                            },
+                            style: ElevatedButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 40,
+                                vertical: 15,
+                              ),
+                              backgroundColor: Colors.white,
+                              foregroundColor: Colors.black,
+                            ),
+                            child: const Text(
+                              'VOLTAR',
+                              style: TextStyle(
+                                fontSize: 24,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
                 );
               },
               'FreeCoinsMenu': (BuildContext context, MyGame game) {
@@ -108,7 +205,9 @@ class MyApp extends StatelessWidget {
                               color: Colors.cyan,
                               fontSize: 54,
                               fontWeight: FontWeight.bold,
-                              shadows: [Shadow(blurRadius: 10, color: Colors.black)],
+                              shadows: [
+                                Shadow(blurRadius: 10, color: Colors.black),
+                              ],
                             ),
                           ),
                           const SizedBox(height: 20),
@@ -121,18 +220,29 @@ class MyApp extends StatelessWidget {
                               color: Colors.white,
                               fontSize: 22,
                               fontWeight: FontWeight.bold,
-                              shadows: [Shadow(blurRadius: 8, color: Colors.black)],
+                              shadows: [
+                                Shadow(blurRadius: 8, color: Colors.black),
+                              ],
                             ),
                           ),
                           const SizedBox(height: 30),
                           ElevatedButton(
                             onPressed: null,
                             style: ElevatedButton.styleFrom(
-                              padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 15),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 40,
+                                vertical: 15,
+                              ),
                               backgroundColor: Colors.white,
                               foregroundColor: Colors.black,
                             ),
-                            child: const Text('INDISPONIVEL', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+                            child: const Text(
+                              'INDISPONIVEL',
+                              style: TextStyle(
+                                fontSize: 24,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
                           ),
                           const SizedBox(height: 20),
                           ElevatedButton(
@@ -141,11 +251,20 @@ class MyApp extends StatelessWidget {
                               game.overlays.add('StartMenu');
                             },
                             style: ElevatedButton.styleFrom(
-                              padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 15),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 40,
+                                vertical: 15,
+                              ),
                               backgroundColor: Colors.white,
                               foregroundColor: Colors.black,
                             ),
-                            child: const Text('VOLTAR', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+                            child: const Text(
+                              'VOLTAR',
+                              style: TextStyle(
+                                fontSize: 24,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
                           ),
                         ],
                       ),
@@ -168,7 +287,9 @@ class MyApp extends StatelessWidget {
                                 color: Colors.cyan,
                                 fontSize: 64,
                                 fontWeight: FontWeight.bold,
-                                shadows: [Shadow(blurRadius: 10, color: Colors.black)],
+                                shadows: [
+                                  Shadow(blurRadius: 10, color: Colors.black),
+                                ],
                               ),
                             ),
                             const SizedBox(height: 20),
@@ -265,11 +386,20 @@ class MyApp extends StatelessWidget {
                                 game.overlays.add('StartMenu');
                               },
                               style: ElevatedButton.styleFrom(
-                                padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 15),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 40,
+                                  vertical: 15,
+                                ),
                                 backgroundColor: Colors.white,
                                 foregroundColor: Colors.black,
                               ),
-                              child: const Text('VOLTAR', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+                              child: const Text(
+                                'VOLTAR',
+                                style: TextStyle(
+                                  fontSize: 24,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
                             ),
                             const SizedBox(height: 20),
                           ],
@@ -304,7 +434,9 @@ class MyApp extends StatelessWidget {
                           color: Colors.red,
                           fontSize: 64,
                           fontWeight: FontWeight.bold,
-                          shadows: [Shadow(blurRadius: 10, color: Colors.black)],
+                          shadows: [
+                            Shadow(blurRadius: 10, color: Colors.black),
+                          ],
                         ),
                       ),
                       const SizedBox(height: 20),
@@ -314,11 +446,20 @@ class MyApp extends StatelessWidget {
                           game.restart();
                         },
                         style: ElevatedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 15),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 40,
+                            vertical: 15,
+                          ),
                           backgroundColor: Colors.white,
                           foregroundColor: Colors.black,
                         ),
-                        child: const Text('Restart', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+                        child: const Text(
+                          'Restart',
+                          style: TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
                       ),
                       const SizedBox(height: 20),
                       ElevatedButton(
@@ -326,11 +467,20 @@ class MyApp extends StatelessWidget {
                           game.backToMenu();
                         },
                         style: ElevatedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 15),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 40,
+                            vertical: 15,
+                          ),
                           backgroundColor: Colors.white,
                           foregroundColor: Colors.black,
                         ),
-                        child: const Text('MENU', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+                        child: const Text(
+                          'MENU',
+                          style: TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
                       ),
                     ],
                   ),
@@ -341,7 +491,11 @@ class MyApp extends StatelessWidget {
                   top: 60,
                   right: 10,
                   child: IconButton(
-                    icon: const Icon(Icons.pause, color: Colors.white, size: 36),
+                    icon: const Icon(
+                      Icons.pause,
+                      color: Colors.white,
+                      size: 36,
+                    ),
                     onPressed: () {
                       if (!game.isGameOver) {
                         game.pauseEngine();
@@ -363,7 +517,9 @@ class MyApp extends StatelessWidget {
                           color: Colors.white,
                           fontSize: 64,
                           fontWeight: FontWeight.bold,
-                          shadows: [Shadow(blurRadius: 10, color: Colors.black)],
+                          shadows: [
+                            Shadow(blurRadius: 10, color: Colors.black),
+                          ],
                         ),
                       ),
                       const SizedBox(height: 40),
@@ -374,11 +530,20 @@ class MyApp extends StatelessWidget {
                           game.resumeEngine();
                         },
                         style: ElevatedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 15),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 40,
+                            vertical: 15,
+                          ),
                           backgroundColor: Colors.white,
                           foregroundColor: Colors.black,
                         ),
-                        child: const Text('RESUME', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+                        child: const Text(
+                          'RESUME',
+                          style: TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
                       ),
                       const SizedBox(height: 20),
                       ElevatedButton(
@@ -387,11 +552,20 @@ class MyApp extends StatelessWidget {
                           game.overlays.add('ConfirmBackToMenu');
                         },
                         style: ElevatedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 15),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 40,
+                            vertical: 15,
+                          ),
                           backgroundColor: Colors.white,
                           foregroundColor: Colors.black,
                         ),
-                        child: const Text('MENU', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+                        child: const Text(
+                          'MENU',
+                          style: TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
                       ),
                     ],
                   ),
@@ -408,7 +582,9 @@ class MyApp extends StatelessWidget {
                           color: Colors.white,
                           fontSize: 48,
                           fontWeight: FontWeight.bold,
-                          shadows: [Shadow(blurRadius: 10, color: Colors.black)],
+                          shadows: [
+                            Shadow(blurRadius: 10, color: Colors.black),
+                          ],
                         ),
                       ),
                       const SizedBox(height: 20),
@@ -427,11 +603,20 @@ class MyApp extends StatelessWidget {
                           game.backToMenu();
                         },
                         style: ElevatedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 15),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 40,
+                            vertical: 15,
+                          ),
                           backgroundColor: Colors.white,
                           foregroundColor: Colors.black,
                         ),
-                        child: const Text('CONFIRMAR', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+                        child: const Text(
+                          'CONFIRMAR',
+                          style: TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
                       ),
                       const SizedBox(height: 20),
                       ElevatedButton(
@@ -440,11 +625,20 @@ class MyApp extends StatelessWidget {
                           game.overlays.add('PauseMenu');
                         },
                         style: ElevatedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 15),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 40,
+                            vertical: 15,
+                          ),
                           backgroundColor: Colors.white,
                           foregroundColor: Colors.black,
                         ),
-                        child: const Text('CANCELAR', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+                        child: const Text(
+                          'CANCELAR',
+                          style: TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
                       ),
                     ],
                   ),
@@ -462,11 +656,7 @@ class CoinCounter extends StatelessWidget {
   final int value;
   final double fontSize;
 
-  const CoinCounter({
-    super.key,
-    required this.value,
-    this.fontSize = 24,
-  });
+  const CoinCounter({super.key, required this.value, this.fontSize = 24});
 
   @override
   Widget build(BuildContext context) {
@@ -483,7 +673,11 @@ class CoinCounter extends StatelessWidget {
             color: Colors.amber,
             border: Border.all(color: Colors.white, width: 2),
             boxShadow: const [
-              BoxShadow(color: Colors.black54, blurRadius: 8, offset: Offset(2, 2)),
+              BoxShadow(
+                color: Colors.black54,
+                blurRadius: 8,
+                offset: Offset(2, 2),
+              ),
             ],
           ),
           child: Text(
@@ -526,10 +720,16 @@ class MainMenuButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final borderColor = primary ? const Color(0xFFFF4FBF) : const Color(0xFF5EDCFF);
-    final backgroundColor = primary ? const Color(0xCC5A063C) : const Color(0xCC061B36);
+    final borderColor = primary
+        ? const Color(0xFFFF4FBF)
+        : const Color(0xFF5EDCFF);
+    final backgroundColor = primary
+        ? const Color(0xCC5A063C)
+        : const Color(0xCC061B36);
     final iconColor = primary ? Colors.white : const Color(0xFF78E6FF);
-    final glowColor = primary ? const Color(0xA6FF4FBF) : const Color(0xA65EDCFF);
+    final glowColor = primary
+        ? const Color(0xA6FF4FBF)
+        : const Color(0xA65EDCFF);
 
     return Container(
       width: 320,
@@ -538,7 +738,11 @@ class MainMenuButton extends StatelessWidget {
         borderRadius: BorderRadius.circular(8),
         boxShadow: [
           BoxShadow(color: glowColor, blurRadius: 14, spreadRadius: 1),
-          const BoxShadow(color: Colors.black87, blurRadius: 10, offset: Offset(3, 4)),
+          const BoxShadow(
+            color: Colors.black87,
+            blurRadius: 10,
+            offset: Offset(3, 4),
+          ),
         ],
       ),
       child: ElevatedButton(
@@ -574,6 +778,92 @@ class MainMenuButton extends StatelessWidget {
   }
 }
 
+class MissionCard extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String progressText;
+  final Color color;
+  final String? actionText;
+  final VoidCallback? onAction;
+
+  const MissionCard({
+    super.key,
+    required this.icon,
+    required this.title,
+    required this.progressText,
+    required this.color,
+    this.actionText,
+    this.onAction,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 360,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: const Color(0xCC071B38),
+        border: Border.all(color: color, width: 2),
+        borderRadius: BorderRadius.circular(8),
+        boxShadow: const [
+          BoxShadow(
+            color: Colors.black87,
+            blurRadius: 12,
+            offset: Offset(3, 4),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Icon(icon, color: color, size: 42),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Text(
+              title,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                shadows: [Shadow(blurRadius: 8, color: Colors.black)],
+              ),
+            ),
+          ),
+          Text(
+            progressText,
+            style: TextStyle(
+              color: color,
+              fontSize: 18,
+              fontWeight: FontWeight.w900,
+              shadows: const [Shadow(blurRadius: 8, color: Colors.black)],
+            ),
+          ),
+          if (actionText != null) ...[
+            const SizedBox(width: 12),
+            ElevatedButton(
+              onPressed: onAction,
+              style: ElevatedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 10,
+                ),
+                backgroundColor: Colors.white,
+                foregroundColor: Colors.black,
+              ),
+              child: Text(
+                actionText!,
+                style: const TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
 class ShopShipCard extends StatelessWidget {
   final String imagePath;
   final String name;
@@ -599,7 +889,10 @@ class ShopShipCard extends StatelessWidget {
       width: 220,
       decoration: BoxDecoration(
         color: owned ? const Color(0xAA2A2100) : Colors.black54,
-        border: Border.all(color: owned ? Colors.amber : Colors.cyan, width: owned ? 3 : 2),
+        border: Border.all(
+          color: owned ? Colors.amber : Colors.cyan,
+          width: owned ? 3 : 2,
+        ),
         borderRadius: BorderRadius.circular(8),
       ),
       child: Column(
@@ -611,7 +904,11 @@ class ShopShipCard extends StatelessWidget {
                 color: Colors.amber,
                 borderRadius: BorderRadius.circular(20),
                 boxShadow: const [
-                  BoxShadow(color: Colors.black54, blurRadius: 8, offset: Offset(2, 2)),
+                  BoxShadow(
+                    color: Colors.black54,
+                    blurRadius: 8,
+                    offset: Offset(2, 2),
+                  ),
                 ],
               ),
               child: const Text(
@@ -625,12 +922,7 @@ class ShopShipCard extends StatelessWidget {
             ),
             const SizedBox(height: 10),
           ],
-          Image.asset(
-            imagePath,
-            width: 90,
-            height: 90,
-            fit: BoxFit.contain,
-          ),
+          Image.asset(imagePath, width: 90, height: 90, fit: BoxFit.contain),
           const SizedBox(height: 10),
           Text(
             name,
@@ -674,7 +966,10 @@ class ShopShipCard extends StatelessWidget {
             ElevatedButton(
               onPressed: canBuy ? onBuy : null,
               style: ElevatedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 12),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 30,
+                  vertical: 12,
+                ),
                 backgroundColor: Colors.white,
                 foregroundColor: Colors.black,
               ),
@@ -705,9 +1000,7 @@ class InventoryMenuView extends StatelessWidget {
   Widget build(BuildContext context) {
     return Stack(
       children: [
-        Positioned.fill(
-          child: Container(color: const Color(0xCC020712)),
-        ),
+        Positioned.fill(child: Container(color: const Color(0xCC020712))),
         SingleChildScrollView(
           padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 20),
           child: Center(
@@ -735,7 +1028,11 @@ class InventoryMenuView extends StatelessWidget {
                     border: Border.all(color: Colors.amber, width: 2),
                     borderRadius: BorderRadius.circular(8),
                     boxShadow: const [
-                      BoxShadow(color: Colors.black87, blurRadius: 14, offset: Offset(3, 4)),
+                      BoxShadow(
+                        color: Colors.black87,
+                        blurRadius: 14,
+                        offset: Offset(3, 4),
+                      ),
                     ],
                   ),
                   child: Column(
@@ -859,7 +1156,10 @@ class InventoryMenuView extends StatelessWidget {
                 ElevatedButton(
                   onPressed: onBack,
                   style: ElevatedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(horizontal: 44, vertical: 15),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 44,
+                      vertical: 15,
+                    ),
                     backgroundColor: Colors.white,
                     foregroundColor: Colors.black,
                   ),
@@ -901,28 +1201,33 @@ class InventoryShipCard extends StatelessWidget {
     final borderColor = selected
         ? Colors.amber
         : unlocked
-            ? Colors.cyan
-            : Colors.white24;
+        ? Colors.cyan
+        : Colors.white24;
     final backgroundColor = selected
         ? const Color(0xAA2A2100)
         : unlocked
-            ? const Color(0xCC071B38)
-            : const Color(0xAA05070D);
+        ? const Color(0xCC071B38)
+        : const Color(0xAA05070D);
 
     return Container(
       padding: const EdgeInsets.all(16),
       width: 220,
       decoration: BoxDecoration(
         color: backgroundColor,
-        border: Border.all(
-          color: borderColor,
-          width: selected ? 3 : 2,
-        ),
+        border: Border.all(color: borderColor, width: selected ? 3 : 2),
         borderRadius: BorderRadius.circular(8),
         boxShadow: [
           if (selected)
-            const BoxShadow(color: Color(0x99FFC107), blurRadius: 16, spreadRadius: 1),
-          const BoxShadow(color: Colors.black87, blurRadius: 12, offset: Offset(3, 4)),
+            const BoxShadow(
+              color: Color(0x99FFC107),
+              blurRadius: 16,
+              spreadRadius: 1,
+            ),
+          const BoxShadow(
+            color: Colors.black87,
+            blurRadius: 12,
+            offset: Offset(3, 4),
+          ),
         ],
       ),
       child: Column(
@@ -935,16 +1240,16 @@ class InventoryShipCard extends StatelessWidget {
                 color: selected
                     ? Colors.amber
                     : unlocked
-                        ? Colors.cyan
-                        : Colors.white24,
+                    ? Colors.cyan
+                    : Colors.white24,
                 borderRadius: BorderRadius.circular(20),
               ),
               child: Text(
                 selected
                     ? 'EQUIPADA'
                     : unlocked
-                        ? 'LIBERADA'
-                        : 'LOCK',
+                    ? 'LIBERADA'
+                    : 'LOCK',
                 style: TextStyle(
                   color: selected || unlocked ? Colors.black : Colors.white70,
                   fontSize: 11,
@@ -982,7 +1287,11 @@ class InventoryShipCard extends StatelessWidget {
               foregroundColor: Colors.black,
             ),
             child: Text(
-              selected ? 'USANDO' : unlocked ? 'EQUIPAR' : 'BLOQUEADA',
+              selected
+                  ? 'USANDO'
+                  : unlocked
+                  ? 'EQUIPAR'
+                  : 'BLOQUEADA',
               style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
           ),
@@ -994,13 +1303,22 @@ class InventoryShipCard extends StatelessWidget {
 
 class MyGame extends FlameGame
     with KeyboardEvents, PanDetector, TapDetector, HasCollisionDetection {
-  static const int ship1Price = 50;
-  static const int ship3Price = 100;
-  static const int ship4Price = 150;
-  static const int ship5Price = 200;
-  static const int ship6Price = 250;
-  static const int ship7Price = 300;
-  static const int ship8Price = 350;
+  static const int destroyEnemiesMissionTarget = 100;
+  static const int destroyEnemiesMissionReward = 150;
+  static const int destroyEnemiesMissionCooldownMs = 60 * 60 * 1000;
+  static const int reachLevelMissionTarget = 20;
+  static const int reachLevelMissionReward = 200;
+  static const int reachLevelMissionCooldownMs = 60 * 60 * 1000;
+  static const int beatHighScoreMissionReward = 400;
+  static const int beatHighScoreMissionCooldownMs = 24 * 60 * 60 * 1000;
+
+  static const int ship1Price = 300;
+  static const int ship3Price = 500;
+  static const int ship4Price = 800;
+  static const int ship5Price = 1000;
+  static const int ship6Price = 1500;
+  static const int ship7Price = 4000;
+  static const int ship8Price = 10000;
 
   late Player player;
   final List<Enemy> enemies = [];
@@ -1015,6 +1333,12 @@ class MyGame extends FlameGame
   int score = 0;
   int coins = 0;
   int matchCoins = 0;
+  int destroyEnemiesMissionProgress = 0;
+  int destroyEnemiesMissionClaimedAt = 0;
+  int reachLevelMissionProgress = 1;
+  int reachLevelMissionClaimedAt = 0;
+  bool beatHighScoreMissionReady = false;
+  int beatHighScoreMissionClaimedAt = 0;
   int highScore = 0;
   int currentLevel = 1;
   bool matchCoinsSaved = false;
@@ -1043,6 +1367,17 @@ class MyGame extends FlameGame
     prefs = await SharedPreferences.getInstance();
     highScore = prefs.getInt('highScore') ?? 0;
     coins = prefs.getInt('coins') ?? 0;
+    destroyEnemiesMissionProgress =
+        prefs.getInt('destroyEnemiesMissionProgress') ?? 0;
+    destroyEnemiesMissionClaimedAt =
+        prefs.getInt('destroyEnemiesMissionClaimedAt') ?? 0;
+    reachLevelMissionProgress = prefs.getInt('reachLevelMissionProgress') ?? 1;
+    reachLevelMissionClaimedAt =
+        prefs.getInt('reachLevelMissionClaimedAt') ?? 0;
+    beatHighScoreMissionReady =
+        prefs.getBool('beatHighScoreMissionReady') ?? false;
+    beatHighScoreMissionClaimedAt =
+        prefs.getInt('beatHighScoreMissionClaimedAt') ?? 0;
     ownsShip1 = prefs.getBool('ownsShip1') ?? false;
     ownsShip3 = prefs.getBool('ownsShip3') ?? false;
     ownsShip4 = prefs.getBool('ownsShip4') ?? false;
@@ -1135,7 +1470,9 @@ class MyGame extends FlameGame
           color: Colors.yellow,
           fontSize: 18,
           fontWeight: FontWeight.bold,
-          shadows: [Shadow(blurRadius: 4.0, color: Colors.black, offset: Offset(2, 2))],
+          shadows: [
+            Shadow(blurRadius: 4.0, color: Colors.black, offset: Offset(2, 2)),
+          ],
         ),
       ),
     );
@@ -1151,7 +1488,7 @@ class MyGame extends FlameGame
 
     // Add enemies for level 1
     spawnLevel();
-    
+
     // Pause the engine initially so the Start Menu handles resuming
     pauseEngine();
   }
@@ -1218,11 +1555,154 @@ class MyGame extends FlameGame
       highScore = score;
       highScoreText.text = 'HI-SCORE: $highScore';
       prefs.setInt('highScore', highScore);
+      registerHighScoreBeatenForMission();
     }
   }
 
   void updateCoins() {
     prefs.setInt('coins', coins);
+  }
+
+  int get _nowMs => DateTime.now().millisecondsSinceEpoch;
+
+  bool get isDestroyEnemiesMissionCoolingDown {
+    if (destroyEnemiesMissionClaimedAt <= 0) return false;
+    return _nowMs - destroyEnemiesMissionClaimedAt <
+        destroyEnemiesMissionCooldownMs;
+  }
+
+  bool get canClaimDestroyEnemiesMission =>
+      !isDestroyEnemiesMissionCoolingDown &&
+      destroyEnemiesMissionProgress >= destroyEnemiesMissionTarget;
+
+  String get destroyEnemiesMissionText {
+    if (isDestroyEnemiesMissionCoolingDown) {
+      final remainingMs =
+          destroyEnemiesMissionCooldownMs -
+          (_nowMs - destroyEnemiesMissionClaimedAt);
+      final remainingMinutes = (remainingMs / 60000).ceil();
+      return 'AGUARDE ${remainingMinutes}m';
+    }
+
+    final progress = min(
+      destroyEnemiesMissionProgress,
+      destroyEnemiesMissionTarget,
+    );
+    return '$progress/$destroyEnemiesMissionTarget';
+  }
+
+  void registerEnemyDestroyedForMission() {
+    if (isDestroyEnemiesMissionCoolingDown ||
+        destroyEnemiesMissionProgress >= destroyEnemiesMissionTarget) {
+      return;
+    }
+
+    destroyEnemiesMissionProgress++;
+    prefs.setInt(
+      'destroyEnemiesMissionProgress',
+      destroyEnemiesMissionProgress,
+    );
+  }
+
+  void claimDestroyEnemiesMission() {
+    if (!canClaimDestroyEnemiesMission) return;
+
+    coins += destroyEnemiesMissionReward;
+    destroyEnemiesMissionProgress = 0;
+    destroyEnemiesMissionClaimedAt = _nowMs;
+    updateCoins();
+    prefs.setInt(
+      'destroyEnemiesMissionProgress',
+      destroyEnemiesMissionProgress,
+    );
+    prefs.setInt(
+      'destroyEnemiesMissionClaimedAt',
+      destroyEnemiesMissionClaimedAt,
+    );
+  }
+
+  bool get canClaimReachLevelMission =>
+      !isReachLevelMissionCoolingDown &&
+      reachLevelMissionProgress >= reachLevelMissionTarget;
+
+  bool get isReachLevelMissionCoolingDown {
+    if (reachLevelMissionClaimedAt <= 0) return false;
+    return _nowMs - reachLevelMissionClaimedAt < reachLevelMissionCooldownMs;
+  }
+
+  String get reachLevelMissionText {
+    if (isReachLevelMissionCoolingDown) {
+      final remainingMs =
+          reachLevelMissionCooldownMs - (_nowMs - reachLevelMissionClaimedAt);
+      final remainingMinutes = (remainingMs / 60000).ceil();
+      return 'AGUARDE ${remainingMinutes}m';
+    }
+
+    final progress = min(reachLevelMissionProgress, reachLevelMissionTarget);
+    return '$progress/$reachLevelMissionTarget';
+  }
+
+  void updateReachLevelMissionProgress() {
+    if (isReachLevelMissionCoolingDown) return;
+    if (currentLevel <= reachLevelMissionProgress) return;
+
+    reachLevelMissionProgress = currentLevel;
+    prefs.setInt('reachLevelMissionProgress', reachLevelMissionProgress);
+  }
+
+  void claimReachLevelMission() {
+    if (!canClaimReachLevelMission) return;
+
+    coins += reachLevelMissionReward;
+    reachLevelMissionProgress = 1;
+    reachLevelMissionClaimedAt = _nowMs;
+    updateCoins();
+    prefs.setInt('reachLevelMissionProgress', reachLevelMissionProgress);
+    prefs.setInt('reachLevelMissionClaimedAt', reachLevelMissionClaimedAt);
+  }
+
+  bool get isBeatHighScoreMissionCoolingDown {
+    if (beatHighScoreMissionClaimedAt <= 0) return false;
+    return _nowMs - beatHighScoreMissionClaimedAt <
+        beatHighScoreMissionCooldownMs;
+  }
+
+  bool get canClaimBeatHighScoreMission =>
+      !isBeatHighScoreMissionCoolingDown && beatHighScoreMissionReady;
+
+  String get beatHighScoreMissionText {
+    if (isBeatHighScoreMissionCoolingDown) {
+      final remainingMs =
+          beatHighScoreMissionCooldownMs -
+          (_nowMs - beatHighScoreMissionClaimedAt);
+      final remainingHours = (remainingMs / (60 * 60 * 1000)).ceil();
+      return 'AGUARDE ${remainingHours}h';
+    }
+
+    return beatHighScoreMissionReady ? '1/1' : '0/1';
+  }
+
+  void registerHighScoreBeatenForMission() {
+    if (isBeatHighScoreMissionCoolingDown || beatHighScoreMissionReady) {
+      return;
+    }
+
+    beatHighScoreMissionReady = true;
+    prefs.setBool('beatHighScoreMissionReady', beatHighScoreMissionReady);
+  }
+
+  void claimBeatHighScoreMission() {
+    if (!canClaimBeatHighScoreMission) return;
+
+    coins += beatHighScoreMissionReward;
+    beatHighScoreMissionReady = false;
+    beatHighScoreMissionClaimedAt = _nowMs;
+    updateCoins();
+    prefs.setBool('beatHighScoreMissionReady', beatHighScoreMissionReady);
+    prefs.setInt(
+      'beatHighScoreMissionClaimedAt',
+      beatHighScoreMissionClaimedAt,
+    );
   }
 
   bool get canBuyShip1 => !ownsShip1 && coins >= ship1Price;
@@ -1330,6 +1810,7 @@ class MyGame extends FlameGame
 
   void updateLevel() {
     levelText.text = 'LEVEL: $currentLevel';
+    updateReachLevelMissionProgress();
   }
 
   void spawnHeartPowerup() {
@@ -1348,10 +1829,10 @@ class MyGame extends FlameGame
 
   void spawnLevel() {
     enemies.clear();
-    
+
     // Até o level 9 vai aumentando as naves, a partir do 10 estabiliza em 5 naves
     int numEnemies = currentLevel < 10 ? currentLevel + 1 : 5;
-    
+
     for (int i = 0; i < numEnemies; i++) {
       final enemy = Enemy();
       enemy.gameSize = size;
@@ -1400,19 +1881,27 @@ class MyGame extends FlameGame
     updateMatchCoins();
     updateLevel();
     updateLives();
-    
+
     player.position = Vector2(
       size.x / 2 - Player.playerSize / 2,
       size.y - Player.playerSize - 20,
     );
-    
+
     children.whereType<Enemy>().forEach((enemy) => enemy.removeFromParent());
     children.whereType<Bullet>().forEach((bullet) => bullet.removeFromParent());
-    children.whereType<PlayerBullet>().forEach((bullet) => bullet.removeFromParent());
-    children.whereType<Explosion>().forEach((explosion) => explosion.removeFromParent());
-    children.whereType<HeartPowerup>().forEach((heart) => heart.removeFromParent());
-    children.whereType<WeaponPowerup>().forEach((powerup) => powerup.removeFromParent());
-    
+    children.whereType<PlayerBullet>().forEach(
+      (bullet) => bullet.removeFromParent(),
+    );
+    children.whereType<Explosion>().forEach(
+      (explosion) => explosion.removeFromParent(),
+    );
+    children.whereType<HeartPowerup>().forEach(
+      (heart) => heart.removeFromParent(),
+    );
+    children.whereType<WeaponPowerup>().forEach(
+      (powerup) => powerup.removeFromParent(),
+    );
+
     enemies.clear();
     spawnLevel();
     overlays.add('PauseButton');
@@ -1442,10 +1931,18 @@ class MyGame extends FlameGame
 
     children.whereType<Enemy>().forEach((enemy) => enemy.removeFromParent());
     children.whereType<Bullet>().forEach((bullet) => bullet.removeFromParent());
-    children.whereType<PlayerBullet>().forEach((bullet) => bullet.removeFromParent());
-    children.whereType<Explosion>().forEach((explosion) => explosion.removeFromParent());
-    children.whereType<HeartPowerup>().forEach((heart) => heart.removeFromParent());
-    children.whereType<WeaponPowerup>().forEach((powerup) => powerup.removeFromParent());
+    children.whereType<PlayerBullet>().forEach(
+      (bullet) => bullet.removeFromParent(),
+    );
+    children.whereType<Explosion>().forEach(
+      (explosion) => explosion.removeFromParent(),
+    );
+    children.whereType<HeartPowerup>().forEach(
+      (heart) => heart.removeFromParent(),
+    );
+    children.whereType<WeaponPowerup>().forEach(
+      (powerup) => powerup.removeFromParent(),
+    );
 
     enemies.clear();
     spawnLevel();
@@ -1518,7 +2015,7 @@ class Player extends SpriteComponent with CollisionCallbacks {
 
   void takeDamage() {
     if ((parent as MyGame).isGameOver) return;
-    
+
     hitCount++;
     if (hitCount % 2 == 0) {
       lives--;
@@ -1549,7 +2046,7 @@ class Player extends SpriteComponent with CollisionCallbacks {
       _spawnBullet(Vector2(0, -1));
       _spawnBullet(Vector2(0.3, -1));
     }
-    
+
     // Play sound
     try {
       // FlameAudio.play('shot.mp3', volume: 0.3);
@@ -1562,7 +2059,7 @@ class Player extends SpriteComponent with CollisionCallbacks {
     final bullet = PlayerBullet();
     bullet.position =
         position.clone() +
-            Vector2(size.x / 2 - bullet.size.x / 2, -bullet.size.y);
+        Vector2(size.x / 2 - bullet.size.x / 2, -bullet.size.y);
     bullet.direction = dir.normalized();
     (parent as MyGame).add(bullet);
   }
@@ -1615,19 +2112,20 @@ class PlayerBullet extends PositionComponent with CollisionCallbacks {
         final game = parent as MyGame;
         game.score += 10; // Add score
         game.matchCoins += 1; // Add one coin for this match per defeated enemy
+        game.registerEnemyDestroyedForMission();
         game.updateScore();
         game.updateMatchCoins();
-        
+
         // Check for extra life every 100 score
         if (game.score > 0 && game.score % 100 == 0) {
           game.spawnHeartPowerup();
         }
-        
+
         // Check for weapon upgrade every 150 score
         if (game.score > 0 && game.score % 150 == 0) {
           game.spawnWeaponPowerup();
         }
-        
+
         // Check if level complete
         if (game.enemies.isEmpty) {
           game.currentLevel++;
@@ -1670,13 +2168,13 @@ class Enemy extends SpriteComponent {
     sprite = await Sprite.load('ship2.png');
     size = Vector2.all(enemySize);
     add(CircleHitbox());
-    
+
     // Calcula dificuldade a cada 10 níveis
     int difficultyTier = level ~/ 10;
-    
+
     // Mais rápido a cada 10 níveis (começa em 50)
     moveSpeed = 50.0 + (difficultyTier * 20.0);
-    
+
     if (difficultyTier >= 1) {
       // A partir do level 10, como tem menos naves, elas atiram BEM mais rápido para compensar
       shootInterval = max(0.4, 0.9 - (difficultyTier * 0.1));
@@ -1740,8 +2238,6 @@ class Enemy extends SpriteComponent {
       // Silently fail if audio doesn't exist
     }
   }
-
-
 }
 
 class Bullet extends PositionComponent with CollisionCallbacks {
@@ -1754,7 +2250,7 @@ class Bullet extends PositionComponent with CollisionCallbacks {
   Future<void> onLoad() async {
     this.size = Vector2.all(bulletSize);
     add(CircleHitbox());
-    
+
     // A bala fica mais rápida a cada 10 níveis
     speed = 250.0 + (difficultyTier * 50.0);
   }
@@ -1797,7 +2293,7 @@ class Explosion extends PositionComponent {
   double lifeTimer = 0.0;
   static const double maxLife = 0.5; // Duração da explosão
   final List<_ExplosionParticle> particles = [];
-  
+
   // Pré-alocar objetos Paint para evitar criar centenas por frame
   final Paint _mainPaint = Paint()..style = PaintingStyle.fill;
   final Paint _glowPaint = Paint()..style = PaintingStyle.fill;
@@ -1815,12 +2311,14 @@ class Explosion extends PositionComponent {
         const Color(0xFFFFA500), // Laranja claro
         const Color(0xFFFFFFFF), // Branco
       ][random.nextInt(4)];
-      
-      particles.add(_ExplosionParticle(
-        velocity: Vector2(cos(angle), sin(angle)) * speed,
-        color: color,
-        size: particleSize,
-      ));
+
+      particles.add(
+        _ExplosionParticle(
+          velocity: Vector2(cos(angle), sin(angle)) * speed,
+          color: color,
+          size: particleSize,
+        ),
+      );
     }
   }
 
@@ -1830,12 +2328,12 @@ class Explosion extends PositionComponent {
     if (parent != null) {
       gameSize = (parent as MyGame).size;
     }
-    
+
     lifeTimer += dt;
     if (lifeTimer >= maxLife) {
       removeFromParent();
     }
-    
+
     // Atualizar posição das partículas
     for (var particle in particles) {
       particle.position += particle.velocity * dt;
@@ -1854,11 +2352,11 @@ class Explosion extends PositionComponent {
     for (var particle in particles) {
       final currentSize = particle.size * (1.0 - progress * 0.5);
       final offset = center + Offset(particle.position.x, particle.position.y);
-      
+
       // Efeito de brilho super leve (sem Blur pesado, apenas um círculo maior semi-transparente)
       _glowPaint.color = particle.color.withOpacity(opacity * 0.3);
       canvas.drawCircle(offset, currentSize * 2.5, _glowPaint);
-      
+
       // Partícula principal
       _mainPaint.color = particle.color.withOpacity(opacity);
       canvas.drawCircle(offset, currentSize, _mainPaint);
@@ -1914,7 +2412,9 @@ class HeartPowerup extends PositionComponent with CollisionCallbacks {
     final textPaint = TextPaint(
       style: const TextStyle(
         fontSize: 30,
-        shadows: [Shadow(blurRadius: 4.0, color: Colors.black, offset: Offset(2, 2))],
+        shadows: [
+          Shadow(blurRadius: 4.0, color: Colors.black, offset: Offset(2, 2)),
+        ],
       ),
     );
     textPaint.render(canvas, '❤️', Vector2.zero());
@@ -1956,7 +2456,9 @@ class WeaponPowerup extends PositionComponent with CollisionCallbacks {
     final textPaint = TextPaint(
       style: const TextStyle(
         fontSize: 30,
-        shadows: [Shadow(blurRadius: 4.0, color: Colors.black, offset: Offset(2, 2))],
+        shadows: [
+          Shadow(blurRadius: 4.0, color: Colors.black, offset: Offset(2, 2)),
+        ],
       ),
     );
     textPaint.render(canvas, '⚡', Vector2.zero());
