@@ -20,7 +20,7 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     final padding = MediaQuery.of(context).padding;
     return MaterialApp(
-      title: 'Alonel Game',
+      title: 'AloneZ',
       home: SafeArea(
         child: Scaffold(
           body: GameWidget(
@@ -730,9 +730,10 @@ class MainMenuButton extends StatelessWidget {
     final glowColor = primary
         ? const Color(0xA6FF4FBF)
         : const Color(0xA65EDCFF);
+    final buttonWidth = min(320.0, MediaQuery.sizeOf(context).width - 32);
 
     return Container(
-      width: 320,
+      width: buttonWidth,
       height: primary ? 66 : 58,
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(8),
@@ -750,7 +751,7 @@ class MainMenuButton extends StatelessWidget {
         style: ElevatedButton.styleFrom(
           backgroundColor: backgroundColor,
           foregroundColor: Colors.white,
-          padding: const EdgeInsets.symmetric(horizontal: 24),
+          padding: const EdgeInsets.symmetric(horizontal: 18),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(8),
             side: BorderSide(color: borderColor, width: 3),
@@ -761,14 +762,20 @@ class MainMenuButton extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(icon, color: iconColor, size: primary ? 36 : 30),
-            const SizedBox(width: 16),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: primary ? 30 : 24,
-                fontWeight: FontWeight.w900,
-                letterSpacing: 1.5,
-                shadows: const [Shadow(blurRadius: 8, color: Colors.black)],
+            const SizedBox(width: 12),
+            Flexible(
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(
+                  label,
+                  maxLines: 1,
+                  style: TextStyle(
+                    fontSize: primary ? 30 : 24,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: 1.5,
+                    shadows: const [Shadow(blurRadius: 8, color: Colors.black)],
+                  ),
+                ),
               ),
             ),
           ],
@@ -1455,16 +1462,14 @@ class MyGame extends FlameGame
 
     scoreText = TextComponent(
       text: 'SCORE: $score',
-      position: Vector2(size.x / 2, 15),
-      anchor: Anchor.topCenter,
+      position: Vector2(15, 75),
       textRenderer: textStyle,
     );
     add(scoreText);
 
     highScoreText = TextComponent(
       text: 'HI-SCORE: $highScore',
-      position: Vector2(size.x / 2, 45),
-      anchor: Anchor.topCenter,
+      position: Vector2(15, 105),
       textRenderer: TextPaint(
         style: const TextStyle(
           color: Colors.yellow,
@@ -1830,6 +1835,20 @@ class MyGame extends FlameGame
   void spawnLevel() {
     enemies.clear();
 
+    if (currentLevel >= 10 && currentLevel <= 100 && currentLevel % 10 == 0) {
+      final boss = Enemy();
+      boss.gameSize = size;
+      boss.player = player;
+      boss.level = currentLevel;
+      boss.bossLevel = currentLevel ~/ 10;
+      boss.maxHealth = boss.bossMaxHealth;
+      boss.health = boss.maxHealth;
+      boss.position = Vector2(size.x / 2 - Enemy.bossSize / 2, size.y * 0.12);
+      enemies.add(boss);
+      add(boss);
+      return;
+    }
+
     // Até o level 9 vai aumentando as naves, a partir do 10 estabiliza em 5 naves
     int numEnemies = currentLevel < 10 ? currentLevel + 1 : 5;
 
@@ -1875,8 +1894,7 @@ class MyGame extends FlameGame
     currentLevel = 1;
     player.lives = 3;
     player.hitCount = 0;
-    player.weaponLevel = 1;
-    player.shootInterval = 1.0;
+    player.resetPowerups();
     updateScore();
     updateMatchCoins();
     updateLevel();
@@ -1916,8 +1934,7 @@ class MyGame extends FlameGame
     currentLevel = 1;
     player.lives = 3;
     player.hitCount = 0;
-    player.weaponLevel = 1;
-    player.shootInterval = 1.0;
+    player.resetPowerups();
     updateScore();
     updateLevel();
     updateLives();
@@ -1959,6 +1976,8 @@ class MyGame extends FlameGame
 class Player extends SpriteComponent with CollisionCallbacks {
   static const double speed = 200.0;
   static const double playerSize = 50.0;
+  static const double normalShootInterval = 1.0;
+  static const double rapidFireShootInterval = 0.07;
 
   String shipAsset = 'ship.png';
   bool isMovingLeft = false;
@@ -1970,8 +1989,20 @@ class Player extends SpriteComponent with CollisionCallbacks {
   int lives = 3;
   int hitCount = 0;
   double shootTimer = 0.0;
-  double shootInterval = 1.0; // Shoot every 1 second
+  double rapidFireTimer = 0.0;
   int weaponLevel = 1;
+
+  int get bulletDamage {
+    if (shipAsset == 'ship.png') return 1;
+
+    final match = RegExp(r'^ship(\d+)\.png$').firstMatch(shipAsset);
+    if (match == null) return 1;
+
+    final shipNumber = int.tryParse(match.group(1) ?? '');
+    if (shipNumber == null) return 1;
+
+    return shipNumber + 1;
+  }
 
   @override
   Future<void> onLoad() async {
@@ -2001,6 +2032,13 @@ class Player extends SpriteComponent with CollisionCallbacks {
     position.y = position.y.clamp(0.0, gameSize.y - size.y);
 
     // Player shooting
+    if (rapidFireTimer > 0) {
+      rapidFireTimer -= dt;
+      if (rapidFireTimer < 0) {
+        rapidFireTimer = 0;
+      }
+    }
+
     shootTimer += dt;
     if (shootTimer >= shootInterval) {
       shootTimer = 0.0;
@@ -2013,26 +2051,27 @@ class Player extends SpriteComponent with CollisionCallbacks {
     (parent as MyGame).updateLives();
   }
 
-  void takeDamage() {
+  void takeDamage({int damage = 1}) {
     if ((parent as MyGame).isGameOver) return;
 
-    hitCount++;
-    if (hitCount % 2 == 0) {
-      lives--;
-      if (lives < 0) lives = 0;
-      (parent as MyGame).updateLives();
+    hitCount += damage;
+    final livesLost = hitCount ~/ 2;
+    hitCount = hitCount % 2;
+
+    if (livesLost > 0) {
+      lives -= livesLost;
+      lives = max(0, lives);
+      final game = parent as MyGame;
+      game.updateLives();
       if (lives <= 0) {
-        (parent as MyGame).gameOver();
+        game.gameOver();
       }
     }
   }
 
-  void upgradeWeapon() {
-    if (shootInterval > 0.3) {
-      shootInterval -= 0.15; // Atira mais rápido
-    } else if (weaponLevel < 3) {
-      weaponLevel++; // Adiciona mais tiros simultâneos
-    }
+  void activateRapidFire() {
+    rapidFireTimer = 10.0;
+    shootTimer = shootInterval;
   }
 
   void shoot() {
@@ -2061,7 +2100,17 @@ class Player extends SpriteComponent with CollisionCallbacks {
         position.clone() +
         Vector2(size.x / 2 - bullet.size.x / 2, -bullet.size.y);
     bullet.direction = dir.normalized();
+    bullet.damage = bulletDamage;
     (parent as MyGame).add(bullet);
+  }
+
+  double get shootInterval =>
+      rapidFireTimer > 0 ? rapidFireShootInterval : normalShootInterval;
+
+  void resetPowerups() {
+    rapidFireTimer = 0.0;
+    shootTimer = 0.0;
+    weaponLevel = 1;
   }
 }
 
@@ -2077,10 +2126,11 @@ class PlayerBullet extends PositionComponent with CollisionCallbacks {
   static const double bulletSize = 8.0;
   static const double speed = 400.0;
   late Vector2 direction;
+  int damage = 1;
 
   @override
   Future<void> onLoad() async {
-    this.size = Vector2.all(bulletSize);
+    size = Vector2.all(bulletSize + min(damage - 1, 4).toDouble());
     add(CircleHitbox());
   }
 
@@ -2103,26 +2153,26 @@ class PlayerBullet extends PositionComponent with CollisionCallbacks {
     super.onCollision(intersectionPoints, other);
     if (other is Enemy) {
       // Damage enemy
-      other.health--;
+      other.health -= damage;
       removeFromParent(); // Remove bullet
       if (other.health <= 0) {
         // Enemy dies
         other.removeFromParent();
         (parent as MyGame).enemies.remove(other);
         final game = parent as MyGame;
-        game.score += 10; // Add score
-        game.matchCoins += 1; // Add one coin for this match per defeated enemy
+        game.score += other.scoreReward; // Add score
+        game.matchCoins += other.coinReward; // Add coins for this match
         game.registerEnemyDestroyedForMission();
         game.updateScore();
         game.updateMatchCoins();
 
-        // Check for extra life every 100 score
-        if (game.score > 0 && game.score % 100 == 0) {
+        // Check for extra life every 150 score
+        if (game.score > 0 && game.score % 150 == 0) {
           game.spawnHeartPowerup();
         }
 
-        // Check for weapon upgrade every 150 score
-        if (game.score > 0 && game.score % 150 == 0) {
+        // Check for rapid-fire powerup every 300 score
+        if (game.score > 0 && game.score % 300 == 0) {
           game.spawnWeaponPowerup();
         }
 
@@ -2145,13 +2195,14 @@ class PlayerBullet extends PositionComponent with CollisionCallbacks {
   void render(Canvas canvas) {
     canvas.drawRect(
       Rect.fromLTWH(0, 0, size.x, size.y),
-      Paint()..color = Colors.cyan,
+      Paint()..color = damage > 1 ? Colors.lightBlueAccent : Colors.cyan,
     );
   }
 }
 
 class Enemy extends SpriteComponent {
   static const double enemySize = 40.0;
+  static const double bossSize = 120.0;
   late Vector2 gameSize;
   late Player player;
   double shootTimer = 0.0;
@@ -2161,20 +2212,105 @@ class Enemy extends SpriteComponent {
   late int health; // New: health system
   late int maxHealth; // New: max health system
   late int level;
+  int bossLevel = 0;
+
+  bool get isBoss => bossLevel > 0;
+  bool get isSecondBoss => bossLevel == 2;
+  bool get isThirdBoss => bossLevel == 3;
+  String get spriteAsset => switch (bossLevel) {
+    1 => 'boss1.png',
+    2 => 'boss2.png',
+    3 => 'boss3.png',
+    4 => 'boss4.png',
+    5 => 'boss5.png',
+    6 => 'boss6.png',
+    7 => 'boss7.png',
+    8 => 'boss8.png',
+    9 => 'boss9.png',
+    10 => 'boss10.png',
+    _ => 'ship2.png',
+  };
+  int get bossMaxHealth => switch (bossLevel) {
+    10 => 6000,
+    9 => 4800,
+    8 => 3600,
+    7 => 2500,
+    6 => 1800,
+    5 => 1200,
+    4 => 800,
+    3 => 500,
+    2 => 300,
+    1 => 150,
+    _ => level,
+  };
+  int get scoreReward => switch (bossLevel) {
+    10 => 2200,
+    9 => 1700,
+    8 => 1300,
+    7 => 1050,
+    6 => 900,
+    5 => 650,
+    4 => 450,
+    3 => 300,
+    2 => 180,
+    1 => 100,
+    _ => 10,
+  };
+  int get coinReward => switch (bossLevel) {
+    10 => 300,
+    9 => 230,
+    8 => 180,
+    7 => 145,
+    6 => 120,
+    5 => 85,
+    4 => 60,
+    3 => 40,
+    2 => 25,
+    1 => 15,
+    _ => 1,
+  };
+  int get bulletDamage => isBoss ? bossLevel : 1;
 
   @override
   Future<void> onLoad() async {
     await super.onLoad();
-    sprite = await Sprite.load('ship2.png');
-    size = Vector2.all(enemySize);
+    sprite = await Sprite.load(spriteAsset);
+    size = Vector2.all(isBoss ? bossSize : enemySize);
     add(CircleHitbox());
 
     // Calcula dificuldade a cada 10 níveis
     int difficultyTier = level ~/ 10;
 
+    if (isBoss) {
+      moveSpeed = switch (bossLevel) {
+        10 => 240.0,
+        9 => 225.0,
+        8 => 210.0,
+        7 => 195.0,
+        6 => 180.0,
+        5 => 165.0,
+        4 => 150.0,
+        3 => 135.0,
+        2 => 115.0,
+        _ => 90.0,
+      };
+      shootInterval = switch (bossLevel) {
+        10 => 0.14,
+        9 => 0.17,
+        8 => 0.19,
+        7 => 0.21,
+        6 => 0.24,
+        5 => 0.27,
+        4 => 0.30,
+        3 => 0.34,
+        2 => 0.42,
+        _ => 0.55,
+      };
+      return;
+    }
+
     // Mais rápido a cada 10 níveis (começa em 50)
     moveSpeed = 50.0 + (difficultyTier * 20.0);
-
     if (difficultyTier >= 1) {
       // A partir do level 10, como tem menos naves, elas atiram BEM mais rápido para compensar
       shootInterval = max(0.4, 0.9 - (difficultyTier * 0.1));
@@ -2201,13 +2337,54 @@ class Enemy extends SpriteComponent {
     position.x = position.x.clamp(0.0, gameSize.x - size.x);
   }
 
+  @override
+  void render(Canvas canvas) {
+    super.render(canvas);
+
+    if (!isBoss) return;
+
+    final barWidth = size.x;
+    const barHeight = 8.0;
+    const barOffset = -14.0;
+    final healthPercent = health / maxHealth;
+
+    canvas.drawRect(
+      Rect.fromLTWH(0, barOffset, barWidth, barHeight),
+      Paint()..color = Colors.black87,
+    );
+    canvas.drawRect(
+      Rect.fromLTWH(0, barOffset, barWidth * healthPercent, barHeight),
+      Paint()
+        ..color = switch (bossLevel) {
+          10 => Colors.cyanAccent,
+          9 => Colors.blueAccent,
+          8 => Colors.pinkAccent,
+          7 => Colors.limeAccent,
+          6 => Colors.white,
+          5 => Colors.greenAccent,
+          4 => Colors.amberAccent,
+          3 => Colors.deepOrangeAccent,
+          2 => Colors.purpleAccent,
+          _ => Colors.redAccent,
+        },
+    );
+    canvas.drawRect(
+      Rect.fromLTWH(0, barOffset, barWidth, barHeight),
+      Paint()
+        ..color = Colors.white
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1,
+    );
+  }
+
   void shoot() {
     final bullet = Bullet();
-    bullet.position = position.clone();
+    bullet.position = position.clone() + Vector2(size.x / 2, size.y * 0.8);
     bullet.difficultyTier = level ~/ 10; // Repassa a dificuldade para a bala
+    bullet.damage = bulletDamage;
 
     // Calculate base direction towards player
-    Vector2 toPlayer = player.position - position;
+    Vector2 toPlayer = player.position - bullet.position;
     Vector2 baseDirection;
     if (toPlayer.length > 0.1) {
       baseDirection = toPlayer.normalized();
@@ -2245,14 +2422,15 @@ class Bullet extends PositionComponent with CollisionCallbacks {
   late double speed;
   late Vector2 direction;
   int difficultyTier = 0;
+  int damage = 1;
 
   @override
   Future<void> onLoad() async {
-    this.size = Vector2.all(bulletSize);
+    size = Vector2.all(damage > 1 ? bulletSize * 1.4 : bulletSize);
     add(CircleHitbox());
 
     // A bala fica mais rápida a cada 10 níveis
-    speed = 250.0 + (difficultyTier * 50.0);
+    speed = 250.0 + (difficultyTier * 50.0) + (damage > 1 ? 80.0 : 0.0);
   }
 
   @override
@@ -2273,7 +2451,7 @@ class Bullet extends PositionComponent with CollisionCallbacks {
   void onCollision(Set<Vector2> intersectionPoints, PositionComponent other) {
     super.onCollision(intersectionPoints, other);
     if (other is Player) {
-      other.takeDamage();
+      other.takeDamage(damage: damage);
       removeFromParent();
     }
   }
@@ -2283,7 +2461,7 @@ class Bullet extends PositionComponent with CollisionCallbacks {
     canvas.drawCircle(
       Offset(size.x / 2, size.y / 2),
       size.x / 2,
-      Paint()..color = Colors.yellow,
+      Paint()..color = damage > 1 ? Colors.redAccent : Colors.yellow,
     );
   }
 }
@@ -2446,7 +2624,7 @@ class WeaponPowerup extends PositionComponent with CollisionCallbacks {
   void onCollision(Set<Vector2> intersectionPoints, PositionComponent other) {
     super.onCollision(intersectionPoints, other);
     if (other is Player) {
-      other.upgradeWeapon();
+      other.activateRapidFire();
       removeFromParent();
     }
   }
