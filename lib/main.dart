@@ -3,14 +3,40 @@ import 'package:flame/components.dart';
 import 'package:flame/input.dart';
 import 'package:flame/events.dart';
 import 'package:flame/collisions.dart';
-import 'package:flame_audio/flame_audio.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:async' as async;
 import 'dart:math';
 
-void main() {
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  if (isMobileAdsSupported) {
+    await MobileAds.instance.initialize();
+  }
   runApp(const MyApp());
+}
+
+bool get isMobileAdsSupported {
+  if (kIsWeb) return false;
+  return defaultTargetPlatform == TargetPlatform.android ||
+      defaultTargetPlatform == TargetPlatform.iOS;
+}
+
+String get freeCoinsRewardedAdUnitId {
+  switch (defaultTargetPlatform) {
+    case TargetPlatform.android:
+      if (kDebugMode) {
+        return 'ca-app-pub-3940256099942544/5224354917';
+      }
+      return 'ca-app-pub-6322228074557650/6767991465';
+    case TargetPlatform.iOS:
+      return 'ca-app-pub-3940256099942544/1712485313';
+    default:
+      return '';
+  }
 }
 
 class MyApp extends StatelessWidget {
@@ -193,218 +219,138 @@ class MyApp extends StatelessWidget {
                 );
               },
               'FreeCoinsMenu': (BuildContext context, MyGame game) {
-                return StatefulBuilder(
-                  builder: (context, setState) {
-                    return Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const Text(
-                            'COINS GRATIS',
-                            style: TextStyle(
-                              color: Colors.cyan,
-                              fontSize: 54,
-                              fontWeight: FontWeight.bold,
-                              shadows: [
-                                Shadow(blurRadius: 10, color: Colors.black),
-                              ],
-                            ),
-                          ),
-                          const SizedBox(height: 20),
-                          CoinCounter(value: game.coins, fontSize: 28),
-                          const SizedBox(height: 30),
-                          const Text(
-                            'Anuncios em breve.',
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 22,
-                              fontWeight: FontWeight.bold,
-                              shadows: [
-                                Shadow(blurRadius: 8, color: Colors.black),
-                              ],
-                            ),
-                          ),
-                          const SizedBox(height: 30),
-                          ElevatedButton(
-                            onPressed: null,
-                            style: ElevatedButton.styleFrom(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 40,
-                                vertical: 15,
-                              ),
-                              backgroundColor: Colors.white,
-                              foregroundColor: Colors.black,
-                            ),
-                            child: const Text(
-                              'INDISPONIVEL',
-                              style: TextStyle(
-                                fontSize: 24,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 20),
-                          ElevatedButton(
-                            onPressed: () {
-                              game.overlays.remove('FreeCoinsMenu');
-                              game.overlays.add('StartMenu');
-                            },
-                            style: ElevatedButton.styleFrom(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 40,
-                                vertical: 15,
-                              ),
-                              backgroundColor: Colors.white,
-                              foregroundColor: Colors.black,
-                            ),
-                            child: const Text(
-                              'VOLTAR',
-                              style: TextStyle(
-                                fontSize: 24,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    );
+                return FreeCoinsMenuView(
+                  game: game,
+                  onBack: () {
+                    game.overlays.remove('FreeCoinsMenu');
+                    game.overlays.add('StartMenu');
                   },
                 );
               },
               'ShopMenu': (BuildContext context, MyGame game) {
                 return StatefulBuilder(
                   builder: (context, setState) {
-                    return SingleChildScrollView(
-                      child: Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            const SizedBox(height: 20),
-                            const Text(
-                              'LOJA',
-                              style: TextStyle(
-                                color: Colors.cyan,
-                                fontSize: 64,
-                                fontWeight: FontWeight.bold,
-                                shadows: [
-                                  Shadow(blurRadius: 10, color: Colors.black),
-                                ],
-                              ),
-                            ),
-                            const SizedBox(height: 20),
-                            CoinCounter(value: game.coins, fontSize: 28),
-                            const SizedBox(height: 30),
-                            Wrap(
-                              spacing: 20,
-                              runSpacing: 20,
-                              alignment: WrapAlignment.center,
+                    return Stack(
+                      children: [
+                        SingleChildScrollView(
+                          child: Center(
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
                               children: [
-                                ShopShipCard(
-                                  imagePath: 'assets/images/ship1.png',
-                                  name: 'NAVE CIANO',
-                                  price: MyGame.ship1Price,
-                                  owned: game.ownsShip1,
-                                  canBuy: game.canBuyShip1,
-                                  onBuy: () {
-                                    game.buyShip1();
-                                    setState(() {});
-                                  },
+                                const SizedBox(height: 20),
+                                const Text(
+                                  'LOJA',
+                                  style: TextStyle(
+                                    color: Colors.cyan,
+                                    fontSize: 64,
+                                    fontWeight: FontWeight.bold,
+                                    shadows: [
+                                      Shadow(
+                                        blurRadius: 10,
+                                        color: Colors.black,
+                                      ),
+                                    ],
+                                  ),
                                 ),
-                                ShopShipCard(
-                                  imagePath: 'assets/images/ship3.png',
-                                  name: 'NAVE RUBI',
-                                  price: MyGame.ship3Price,
-                                  owned: game.ownsShip3,
-                                  canBuy: game.canBuyShip3,
-                                  onBuy: () {
-                                    game.buyShip3();
-                                    setState(() {});
-                                  },
+                                const SizedBox(height: 20),
+                                CoinCounter(value: game.coins, fontSize: 28),
+                                const SizedBox(height: 30),
+                                Wrap(
+                                  spacing: 20,
+                                  runSpacing: 20,
+                                  alignment: WrapAlignment.center,
+                                  children: [
+                                    ShopShipCard(
+                                      imagePath: 'assets/images/ship1.png',
+                                      name: 'NAVE CIANO',
+                                      price: MyGame.ship1Price,
+                                      owned: game.ownsShip1,
+                                      canBuy: game.canBuyShip1,
+                                      onBuy: () {
+                                        game.buyShip1();
+                                        setState(() {});
+                                      },
+                                    ),
+                                    ShopShipCard(
+                                      imagePath: 'assets/images/ship3.png',
+                                      name: 'NAVE RUBI',
+                                      price: MyGame.ship3Price,
+                                      owned: game.ownsShip3,
+                                      canBuy: game.canBuyShip3,
+                                      onBuy: () {
+                                        game.buyShip3();
+                                        setState(() {});
+                                      },
+                                    ),
+                                    ShopShipCard(
+                                      imagePath: 'assets/images/ship4.png',
+                                      name: 'NAVE OURO',
+                                      price: MyGame.ship4Price,
+                                      owned: game.ownsShip4,
+                                      canBuy: game.canBuyShip4,
+                                      onBuy: () {
+                                        game.buyShip4();
+                                        setState(() {});
+                                      },
+                                    ),
+                                    ShopShipCard(
+                                      imagePath: 'assets/images/ship5.png',
+                                      name: 'NAVE VIOLETA',
+                                      price: MyGame.ship5Price,
+                                      owned: game.ownsShip5,
+                                      canBuy: game.canBuyShip5,
+                                      onBuy: () {
+                                        game.buyShip5();
+                                        setState(() {});
+                                      },
+                                    ),
+                                    ShopShipCard(
+                                      imagePath: 'assets/images/ship6.png',
+                                      name: 'NAVE NEBULA',
+                                      price: MyGame.ship6Price,
+                                      owned: game.ownsShip6,
+                                      canBuy: game.canBuyShip6,
+                                      onBuy: () {
+                                        game.buyShip6();
+                                        setState(() {});
+                                      },
+                                    ),
+                                    ShopShipCard(
+                                      imagePath: 'assets/images/ship7.png',
+                                      name: 'NAVE SOLAR',
+                                      price: MyGame.ship7Price,
+                                      owned: game.ownsShip7,
+                                      canBuy: game.canBuyShip7,
+                                      onBuy: () {
+                                        game.buyShip7();
+                                        setState(() {});
+                                      },
+                                    ),
+                                    ShopShipCard(
+                                      imagePath: 'assets/images/ship8.png',
+                                      name: 'NAVE COSMICA',
+                                      price: MyGame.ship8Price,
+                                      owned: game.ownsShip8,
+                                      canBuy: game.canBuyShip8,
+                                      onBuy: () {
+                                        game.buyShip8();
+                                        setState(() {});
+                                      },
+                                    ),
+                                  ],
                                 ),
-                                ShopShipCard(
-                                  imagePath: 'assets/images/ship4.png',
-                                  name: 'NAVE OURO',
-                                  price: MyGame.ship4Price,
-                                  owned: game.ownsShip4,
-                                  canBuy: game.canBuyShip4,
-                                  onBuy: () {
-                                    game.buyShip4();
-                                    setState(() {});
-                                  },
-                                ),
-                                ShopShipCard(
-                                  imagePath: 'assets/images/ship5.png',
-                                  name: 'NAVE VIOLETA',
-                                  price: MyGame.ship5Price,
-                                  owned: game.ownsShip5,
-                                  canBuy: game.canBuyShip5,
-                                  onBuy: () {
-                                    game.buyShip5();
-                                    setState(() {});
-                                  },
-                                ),
-                                ShopShipCard(
-                                  imagePath: 'assets/images/ship6.png',
-                                  name: 'NAVE NEBULA',
-                                  price: MyGame.ship6Price,
-                                  owned: game.ownsShip6,
-                                  canBuy: game.canBuyShip6,
-                                  onBuy: () {
-                                    game.buyShip6();
-                                    setState(() {});
-                                  },
-                                ),
-                                ShopShipCard(
-                                  imagePath: 'assets/images/ship7.png',
-                                  name: 'NAVE SOLAR',
-                                  price: MyGame.ship7Price,
-                                  owned: game.ownsShip7,
-                                  canBuy: game.canBuyShip7,
-                                  onBuy: () {
-                                    game.buyShip7();
-                                    setState(() {});
-                                  },
-                                ),
-                                ShopShipCard(
-                                  imagePath: 'assets/images/ship8.png',
-                                  name: 'NAVE COSMICA',
-                                  price: MyGame.ship8Price,
-                                  owned: game.ownsShip8,
-                                  canBuy: game.canBuyShip8,
-                                  onBuy: () {
-                                    game.buyShip8();
-                                    setState(() {});
-                                  },
-                                ),
+                                const SizedBox(height: 20),
                               ],
                             ),
-                            const SizedBox(height: 30),
-                            ElevatedButton(
-                              onPressed: () {
-                                game.overlays.remove('ShopMenu');
-                                game.overlays.add('StartMenu');
-                              },
-                              style: ElevatedButton.styleFrom(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 40,
-                                  vertical: 15,
-                                ),
-                                backgroundColor: Colors.white,
-                                foregroundColor: Colors.black,
-                              ),
-                              child: const Text(
-                                'VOLTAR',
-                                style: TextStyle(
-                                  fontSize: 24,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ),
-                            const SizedBox(height: 20),
-                          ],
+                          ),
                         ),
-                      ),
+                        FixedBackArrow(
+                          onPressed: () {
+                            game.overlays.remove('ShopMenu');
+                            game.overlays.add('StartMenu');
+                          },
+                        ),
+                      ],
                     );
                   },
                 );
@@ -487,23 +433,15 @@ class MyApp extends StatelessWidget {
                 );
               },
               'PauseButton': (BuildContext context, MyGame game) {
-                return Positioned(
-                  top: 60,
-                  right: 10,
-                  child: IconButton(
-                    icon: const Icon(
-                      Icons.pause,
-                      color: Colors.white,
-                      size: 36,
-                    ),
-                    onPressed: () {
-                      if (!game.isGameOver) {
-                        game.pauseEngine();
-                        game.overlays.remove('PauseButton');
-                        game.overlays.add('PauseMenu');
-                      }
-                    },
-                  ),
+                return GameplayHudView(
+                  game: game,
+                  onPause: () {
+                    if (!game.isGameOver) {
+                      game.pauseEngine();
+                      game.overlays.remove('PauseButton');
+                      game.overlays.add('PauseMenu');
+                    }
+                  },
                 );
               },
               'PauseMenu': (BuildContext context, MyGame game) {
@@ -704,6 +642,150 @@ class CoinCounter extends StatelessWidget {
   }
 }
 
+class GameplayHudView extends StatefulWidget {
+  final MyGame game;
+  final VoidCallback onPause;
+
+  const GameplayHudView({super.key, required this.game, required this.onPause});
+
+  @override
+  State<GameplayHudView> createState() => _GameplayHudViewState();
+}
+
+class _GameplayHudViewState extends State<GameplayHudView> {
+  async.Timer? _refreshTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    widget.game.onShieldStateChanged = _refresh;
+    _refreshTimer = async.Timer.periodic(const Duration(milliseconds: 250), (
+      _,
+    ) {
+      if (mounted) setState(() {});
+    });
+  }
+
+  @override
+  void dispose() {
+    _refreshTimer?.cancel();
+    if (widget.game.onShieldStateChanged == _refresh) {
+      widget.game.onShieldStateChanged = null;
+    }
+    super.dispose();
+  }
+
+  void _refresh() {
+    if (mounted) setState(() {});
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final game = widget.game;
+    final hasStoredShield = game.storedShields > 0;
+    final isShieldActive = game.player.shieldTimer > 0;
+    final canUseShield = hasStoredShield && !isShieldActive && !game.isGameOver;
+
+    return Stack(
+      children: [
+        Positioned(
+          top: 60,
+          right: 10,
+          child: IconButton(
+            icon: const Icon(Icons.pause, color: Colors.white, size: 36),
+            onPressed: widget.onPause,
+          ),
+        ),
+        Positioned(
+          top: 112,
+          right: 10,
+          child: Material(
+            color: Colors.transparent,
+            child: Stack(
+              clipBehavior: Clip.none,
+              children: [
+                IconButton(
+                  tooltip: 'Usar escudo',
+                  onPressed: canUseShield
+                      ? () {
+                          game.useStoredShield();
+                          setState(() {});
+                        }
+                      : null,
+                  icon: Icon(
+                    Icons.shield,
+                    color: isShieldActive
+                        ? Colors.cyanAccent
+                        : hasStoredShield
+                        ? Colors.white
+                        : Colors.white38,
+                    size: 34,
+                  ),
+                  style: IconButton.styleFrom(
+                    backgroundColor: const Color(0x99020712),
+                    disabledBackgroundColor: const Color(0x66020712),
+                    fixedSize: const Size(54, 54),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      side: BorderSide(
+                        color: isShieldActive
+                            ? Colors.cyanAccent
+                            : const Color(0xFF5EDCFF),
+                        width: 2,
+                      ),
+                    ),
+                  ),
+                ),
+                Positioned(
+                  right: -3,
+                  top: -3,
+                  child: Container(
+                    height: 22,
+                    constraints: const BoxConstraints(minWidth: 22),
+                    alignment: Alignment.center,
+                    padding: const EdgeInsets.symmetric(horizontal: 5),
+                    decoration: BoxDecoration(
+                      color: hasStoredShield
+                          ? Colors.cyanAccent
+                          : const Color(0xFF777777),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.white, width: 1.5),
+                    ),
+                    child: Text(
+                      '${game.storedShields}',
+                      style: const TextStyle(
+                        color: Colors.black,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                  ),
+                ),
+                if (isShieldActive)
+                  Positioned(
+                    left: -5,
+                    right: -5,
+                    bottom: -18,
+                    child: Text(
+                      '${game.player.shieldTimer.ceil()}s',
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                        color: Colors.cyanAccent,
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        shadows: [Shadow(blurRadius: 6, color: Colors.black)],
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
 class MainMenuButton extends StatelessWidget {
   final String label;
   final IconData icon;
@@ -781,6 +863,148 @@ class MainMenuButton extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+class FixedBackArrow extends StatelessWidget {
+  final VoidCallback onPressed;
+
+  const FixedBackArrow({super.key, required this.onPressed});
+
+  @override
+  Widget build(BuildContext context) {
+    return Positioned(
+      left: 12,
+      top: 12,
+      child: Material(
+        color: Colors.transparent,
+        child: IconButton(
+          onPressed: onPressed,
+          icon: const Icon(Icons.arrow_back),
+          color: Colors.white,
+          iconSize: 34,
+          tooltip: 'Voltar',
+          style: IconButton.styleFrom(
+            backgroundColor: const Color(0x99020712),
+            foregroundColor: Colors.white,
+            fixedSize: const Size(54, 54),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(8),
+              side: const BorderSide(color: Colors.cyan, width: 2),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class FreeCoinsMenuView extends StatefulWidget {
+  final MyGame game;
+  final VoidCallback onBack;
+
+  const FreeCoinsMenuView({
+    super.key,
+    required this.game,
+    required this.onBack,
+  });
+
+  @override
+  State<FreeCoinsMenuView> createState() => _FreeCoinsMenuViewState();
+}
+
+class _FreeCoinsMenuViewState extends State<FreeCoinsMenuView> {
+  async.Timer? _refreshTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    widget.game.onFreeCoinsAdStateChanged = _refresh;
+    widget.game.loadFreeCoinsRewardedAd();
+    _refreshTimer = async.Timer.periodic(const Duration(seconds: 1), (_) {
+      if (!mounted) return;
+      widget.game.loadFreeCoinsRewardedAd();
+      setState(() {});
+    });
+  }
+
+  @override
+  void dispose() {
+    _refreshTimer?.cancel();
+    if (widget.game.onFreeCoinsAdStateChanged == _refresh) {
+      widget.game.onFreeCoinsAdStateChanged = null;
+    }
+    super.dispose();
+  }
+
+  void _refresh() {
+    if (mounted) setState(() {});
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final game = widget.game;
+    final canWatchAd = game.canWatchFreeCoinsAd;
+    return Stack(
+      children: [
+        Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Text(
+                'COINS GRATIS',
+                style: TextStyle(
+                  color: Colors.cyan,
+                  fontSize: 54,
+                  fontWeight: FontWeight.bold,
+                  shadows: [Shadow(blurRadius: 10, color: Colors.black)],
+                ),
+              ),
+              const SizedBox(height: 20),
+              CoinCounter(value: game.coins, fontSize: 28),
+              const SizedBox(height: 30),
+              Text(
+                game.freeCoinsAdMessage,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
+                  shadows: [Shadow(blurRadius: 8, color: Colors.black)],
+                ),
+              ),
+              const SizedBox(height: 30),
+              ElevatedButton.icon(
+                onPressed: canWatchAd
+                    ? () => game.showFreeCoinsRewardedAd()
+                    : null,
+                icon: const Icon(Icons.smart_display),
+                label: Text(
+                  canWatchAd
+                      ? 'ASSISTIR +${MyGame.freeCoinsRewardAmount} C'
+                      : game.freeCoinsAdButtonText,
+                  style: const TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                style: ElevatedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 28,
+                    vertical: 15,
+                  ),
+                  backgroundColor: Colors.white,
+                  foregroundColor: Colors.black,
+                  disabledBackgroundColor: const Color(0xFF777777),
+                  disabledForegroundColor: Colors.white,
+                ),
+              ),
+            ],
+          ),
+        ),
+        FixedBackArrow(onPressed: widget.onBack),
+      ],
     );
   }
 }
@@ -1160,26 +1384,11 @@ class InventoryMenuView extends StatelessWidget {
                   ],
                 ),
                 const SizedBox(height: 28),
-                ElevatedButton(
-                  onPressed: onBack,
-                  style: ElevatedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 44,
-                      vertical: 15,
-                    ),
-                    backgroundColor: Colors.white,
-                    foregroundColor: Colors.black,
-                  ),
-                  child: const Text(
-                    'VOLTAR',
-                    style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-                  ),
-                ),
-                const SizedBox(height: 20),
               ],
             ),
           ),
         ),
+        FixedBackArrow(onPressed: onBack),
       ],
     );
   }
@@ -1310,6 +1519,9 @@ class InventoryShipCard extends StatelessWidget {
 
 class MyGame extends FlameGame
     with KeyboardEvents, PanDetector, TapDetector, HasCollisionDetection {
+  static const int freeCoinsRewardAmount = 100;
+  static const int freeCoinsCooldownMs = 5 * 60 * 1000;
+  static const int freeCoinsDailyAdLimit = 20;
   static const int destroyEnemiesMissionTarget = 100;
   static const int destroyEnemiesMissionReward = 150;
   static const int destroyEnemiesMissionCooldownMs = 60 * 60 * 1000;
@@ -1340,6 +1552,7 @@ class MyGame extends FlameGame
   int score = 0;
   int coins = 0;
   int matchCoins = 0;
+  int storedShields = 0;
   int destroyEnemiesMissionProgress = 0;
   int destroyEnemiesMissionClaimedAt = 0;
   int reachLevelMissionProgress = 1;
@@ -1357,6 +1570,17 @@ class MyGame extends FlameGame
   bool ownsShip7 = false;
   bool ownsShip8 = false;
   String selectedShipAsset = 'ship.png';
+  RewardedAd? _freeCoinsRewardedAd;
+  bool _isFreeCoinsAdLoading = false;
+  bool _isFreeCoinsAdShowing = false;
+  int freeCoinsLastWatchedAt = 0;
+  int freeCoinsAdsWatchedToday = 0;
+  String freeCoinsAdsWatchedDay = '';
+  String _freeCoinsAdStatusMessage = isMobileAdsSupported
+      ? 'Carregando anuncio...'
+      : 'Anuncios disponiveis apenas no Android/iOS.';
+  VoidCallback? onFreeCoinsAdStateChanged;
+  VoidCallback? onShieldStateChanged;
 
   MyGame({required this.padding});
 
@@ -1385,6 +1609,10 @@ class MyGame extends FlameGame
         prefs.getBool('beatHighScoreMissionReady') ?? false;
     beatHighScoreMissionClaimedAt =
         prefs.getInt('beatHighScoreMissionClaimedAt') ?? 0;
+    freeCoinsLastWatchedAt = prefs.getInt('freeCoinsLastWatchedAt') ?? 0;
+    freeCoinsAdsWatchedToday = prefs.getInt('freeCoinsAdsWatchedToday') ?? 0;
+    freeCoinsAdsWatchedDay = prefs.getString('freeCoinsAdsWatchedDay') ?? '';
+    refreshFreeCoinsDailyLimit();
     ownsShip1 = prefs.getBool('ownsShip1') ?? false;
     ownsShip3 = prefs.getBool('ownsShip3') ?? false;
     ownsShip4 = prefs.getBool('ownsShip4') ?? false;
@@ -1493,9 +1721,17 @@ class MyGame extends FlameGame
 
     // Add enemies for level 1
     spawnLevel();
+    loadFreeCoinsRewardedAd();
 
     // Pause the engine initially so the Start Menu handles resuming
     pauseEngine();
+  }
+
+  @override
+  void onRemove() {
+    _freeCoinsRewardedAd?.dispose();
+    _freeCoinsRewardedAd = null;
+    super.onRemove();
   }
 
   @override
@@ -1566,6 +1802,165 @@ class MyGame extends FlameGame
 
   void updateCoins() {
     prefs.setInt('coins', coins);
+  }
+
+  String get _todayKey {
+    final now = DateTime.now();
+    final month = now.month.toString().padLeft(2, '0');
+    final day = now.day.toString().padLeft(2, '0');
+    return '${now.year}-$month-$day';
+  }
+
+  void refreshFreeCoinsDailyLimit() {
+    final today = _todayKey;
+    if (freeCoinsAdsWatchedDay == today) return;
+
+    freeCoinsAdsWatchedDay = today;
+    freeCoinsAdsWatchedToday = 0;
+    prefs.setString('freeCoinsAdsWatchedDay', freeCoinsAdsWatchedDay);
+    prefs.setInt('freeCoinsAdsWatchedToday', freeCoinsAdsWatchedToday);
+  }
+
+  bool get hasFreeCoinsDailyAdsLeft {
+    refreshFreeCoinsDailyLimit();
+    return freeCoinsAdsWatchedToday < freeCoinsDailyAdLimit;
+  }
+
+  bool get isFreeCoinsAdCoolingDown {
+    if (freeCoinsLastWatchedAt <= 0) return false;
+    return _nowMs - freeCoinsLastWatchedAt < freeCoinsCooldownMs;
+  }
+
+  int get freeCoinsCooldownRemainingSeconds {
+    if (!isFreeCoinsAdCoolingDown) return 0;
+    final remainingMs = freeCoinsCooldownMs - (_nowMs - freeCoinsLastWatchedAt);
+    return (remainingMs / 1000).ceil();
+  }
+
+  String get _freeCoinsCooldownText {
+    final seconds = freeCoinsCooldownRemainingSeconds;
+    final minutes = (seconds / 60).ceil();
+    if (minutes > 1) return '${minutes}m';
+    return '${seconds}s';
+  }
+
+  bool get canWatchFreeCoinsAd =>
+      isMobileAdsSupported &&
+      hasFreeCoinsDailyAdsLeft &&
+      !isFreeCoinsAdCoolingDown &&
+      _freeCoinsRewardedAd != null &&
+      !_isFreeCoinsAdShowing;
+
+  String get freeCoinsAdMessage {
+    if (!isMobileAdsSupported) {
+      return 'Anuncios disponiveis apenas no Android/iOS.';
+    }
+    if (!hasFreeCoinsDailyAdsLeft) {
+      return 'Limite diario atingido. Volte amanha.';
+    }
+    if (isFreeCoinsAdCoolingDown) {
+      return 'Aguarde $_freeCoinsCooldownText para assistir outro anuncio.';
+    }
+    if (_isFreeCoinsAdShowing) return 'Abrindo anuncio...';
+    if (_isFreeCoinsAdLoading) return 'Carregando anuncio...';
+    return _freeCoinsAdStatusMessage;
+  }
+
+  String get freeCoinsAdButtonText {
+    if (!isMobileAdsSupported) return 'INDISPONIVEL';
+    if (!hasFreeCoinsDailyAdsLeft) return 'LIMITE DIARIO';
+    if (isFreeCoinsAdCoolingDown) return 'AGUARDE $_freeCoinsCooldownText';
+    if (_isFreeCoinsAdShowing) return 'ABRINDO...';
+    if (_isFreeCoinsAdLoading) return 'CARREGANDO...';
+    return 'TENTAR NOVAMENTE';
+  }
+
+  void _notifyFreeCoinsAdStateChanged() {
+    onFreeCoinsAdStateChanged?.call();
+  }
+
+  void loadFreeCoinsRewardedAd() {
+    if (!isMobileAdsSupported ||
+        !hasFreeCoinsDailyAdsLeft ||
+        isFreeCoinsAdCoolingDown ||
+        _isFreeCoinsAdLoading ||
+        _freeCoinsRewardedAd != null) {
+      return;
+    }
+
+    _isFreeCoinsAdLoading = true;
+    _freeCoinsAdStatusMessage = 'Carregando anuncio...';
+    _notifyFreeCoinsAdStateChanged();
+
+    RewardedAd.load(
+      adUnitId: freeCoinsRewardedAdUnitId,
+      request: const AdRequest(),
+      rewardedAdLoadCallback: RewardedAdLoadCallback(
+        onAdLoaded: (ad) {
+          _freeCoinsRewardedAd = ad;
+          _isFreeCoinsAdLoading = false;
+          _freeCoinsAdStatusMessage =
+              'Assista um anuncio para ganhar $freeCoinsRewardAmount coins.';
+          _notifyFreeCoinsAdStateChanged();
+        },
+        onAdFailedToLoad: (error) {
+          _freeCoinsRewardedAd = null;
+          _isFreeCoinsAdLoading = false;
+          _freeCoinsAdStatusMessage =
+              'Nao foi possivel carregar o anuncio. Tente novamente.';
+          _notifyFreeCoinsAdStateChanged();
+        },
+      ),
+    );
+  }
+
+  Future<void> showFreeCoinsRewardedAd() async {
+    if (!hasFreeCoinsDailyAdsLeft || isFreeCoinsAdCoolingDown) {
+      _notifyFreeCoinsAdStateChanged();
+      return;
+    }
+
+    final ad = _freeCoinsRewardedAd;
+    if (ad == null || _isFreeCoinsAdShowing) {
+      loadFreeCoinsRewardedAd();
+      return;
+    }
+
+    _freeCoinsRewardedAd = null;
+    _isFreeCoinsAdShowing = true;
+    _freeCoinsAdStatusMessage = 'Abrindo anuncio...';
+    _notifyFreeCoinsAdStateChanged();
+
+    ad.fullScreenContentCallback = FullScreenContentCallback<RewardedAd>(
+      onAdDismissedFullScreenContent: (ad) {
+        ad.dispose();
+        _isFreeCoinsAdShowing = false;
+        loadFreeCoinsRewardedAd();
+        _notifyFreeCoinsAdStateChanged();
+      },
+      onAdFailedToShowFullScreenContent: (ad, error) {
+        ad.dispose();
+        _isFreeCoinsAdShowing = false;
+        _freeCoinsAdStatusMessage =
+            'Nao foi possivel abrir o anuncio. Tente novamente.';
+        loadFreeCoinsRewardedAd();
+        _notifyFreeCoinsAdStateChanged();
+      },
+    );
+
+    await ad.show(
+      onUserEarnedReward: (ad, reward) {
+        coins += freeCoinsRewardAmount;
+        freeCoinsLastWatchedAt = _nowMs;
+        freeCoinsAdsWatchedToday++;
+        updateCoins();
+        prefs.setInt('freeCoinsLastWatchedAt', freeCoinsLastWatchedAt);
+        prefs.setInt('freeCoinsAdsWatchedToday', freeCoinsAdsWatchedToday);
+        prefs.setString('freeCoinsAdsWatchedDay', freeCoinsAdsWatchedDay);
+        _freeCoinsAdStatusMessage = 'Voce ganhou $freeCoinsRewardAmount coins!';
+        _notifyFreeCoinsAdStateChanged();
+      },
+    );
   }
 
   int get _nowMs => DateTime.now().millisecondsSinceEpoch;
@@ -1832,6 +2227,40 @@ class MyGame extends FlameGame
     add(powerup);
   }
 
+  void spawnShieldPowerup(Vector2 position) {
+    final powerup = ShieldPowerup()
+      ..position = Vector2(
+        position.x.clamp(0.0, max(0.0, size.x - ShieldPowerup.itemSize)),
+        position.y,
+      )
+      ..gameSize = size;
+    add(powerup);
+  }
+
+  void collectShieldPowerup() {
+    storedShields++;
+    onShieldStateChanged?.call();
+  }
+
+  bool useStoredShield() {
+    if (storedShields <= 0 || player.shieldTimer > 0 || isGameOver) {
+      return false;
+    }
+
+    storedShields--;
+    player.activateShield();
+    onShieldStateChanged?.call();
+    return true;
+  }
+
+  int enemyHealthForLevel(int level) {
+    if (level <= 10) {
+      return max(1, (level / 2).ceil());
+    }
+
+    return 5 + ((level - 10) / 4).ceil();
+  }
+
   void spawnLevel() {
     enemies.clear();
 
@@ -1843,7 +2272,8 @@ class MyGame extends FlameGame
       boss.bossLevel = currentLevel ~/ 10;
       boss.maxHealth = boss.bossMaxHealth;
       boss.health = boss.maxHealth;
-      boss.position = Vector2(size.x / 2 - Enemy.bossSize / 2, size.y * 0.12);
+      boss.targetY = size.y * 0.12;
+      boss.position = Vector2(size.x / 2 - Enemy.bossSize / 2, -Enemy.bossSize);
       enemies.add(boss);
       add(boss);
       return;
@@ -1857,11 +2287,12 @@ class MyGame extends FlameGame
       enemy.gameSize = size;
       enemy.player = player;
       enemy.level = currentLevel;
-      enemy.maxHealth = currentLevel;
+      enemy.maxHealth = enemyHealthForLevel(currentLevel);
       enemy.health = enemy.maxHealth;
+      enemy.targetY = size.y * 0.2;
       enemy.position = Vector2(
         (size.x / (numEnemies + 1)) * (i + 1),
-        size.y * 0.2,
+        -Enemy.enemySize - (i * 18),
       );
       enemies.add(enemy);
       add(enemy);
@@ -1891,6 +2322,7 @@ class MyGame extends FlameGame
     score = 0;
     matchCoins = 0;
     matchCoinsSaved = false;
+    storedShields = 0;
     currentLevel = 1;
     player.lives = 3;
     player.hitCount = 0;
@@ -1899,6 +2331,7 @@ class MyGame extends FlameGame
     updateMatchCoins();
     updateLevel();
     updateLives();
+    onShieldStateChanged?.call();
 
     player.position = Vector2(
       size.x / 2 - Player.playerSize / 2,
@@ -1919,6 +2352,9 @@ class MyGame extends FlameGame
     children.whereType<WeaponPowerup>().forEach(
       (powerup) => powerup.removeFromParent(),
     );
+    children.whereType<ShieldPowerup>().forEach(
+      (powerup) => powerup.removeFromParent(),
+    );
 
     enemies.clear();
     spawnLevel();
@@ -1931,6 +2367,7 @@ class MyGame extends FlameGame
     score = 0;
     matchCoins = 0;
     matchCoinsSaved = false;
+    storedShields = 0;
     currentLevel = 1;
     player.lives = 3;
     player.hitCount = 0;
@@ -1940,6 +2377,7 @@ class MyGame extends FlameGame
     updateLives();
     updateCoins();
     updateMatchCoins();
+    onShieldStateChanged?.call();
 
     player.position = Vector2(
       size.x / 2 - Player.playerSize / 2,
@@ -1958,6 +2396,9 @@ class MyGame extends FlameGame
       (heart) => heart.removeFromParent(),
     );
     children.whereType<WeaponPowerup>().forEach(
+      (powerup) => powerup.removeFromParent(),
+    );
+    children.whereType<ShieldPowerup>().forEach(
       (powerup) => powerup.removeFromParent(),
     );
 
@@ -1990,6 +2431,7 @@ class Player extends SpriteComponent with CollisionCallbacks {
   int hitCount = 0;
   double shootTimer = 0.0;
   double rapidFireTimer = 0.0;
+  double shieldTimer = 0.0;
   int weaponLevel = 1;
 
   int get shipNumber {
@@ -2039,6 +2481,12 @@ class Player extends SpriteComponent with CollisionCallbacks {
         rapidFireTimer = 0;
       }
     }
+    if (shieldTimer > 0) {
+      shieldTimer -= dt;
+      if (shieldTimer < 0) {
+        shieldTimer = 0;
+      }
+    }
 
     shootTimer += dt;
     if (shootTimer >= shootInterval) {
@@ -2054,6 +2502,7 @@ class Player extends SpriteComponent with CollisionCallbacks {
 
   void takeDamage({int damage = 1}) {
     if ((parent as MyGame).isGameOver) return;
+    if (shieldTimer > 0) return;
 
     hitCount += damage;
     final livesLost = hitCount ~/ 2;
@@ -2073,6 +2522,11 @@ class Player extends SpriteComponent with CollisionCallbacks {
   void activateRapidFire() {
     rapidFireTimer = 10.0;
     shootTimer = shootInterval;
+  }
+
+  void activateShield() {
+    shieldTimer = 5.0;
+    (parent as MyGame).onShieldStateChanged?.call();
   }
 
   void shoot() {
@@ -2104,18 +2558,17 @@ class Player extends SpriteComponent with CollisionCallbacks {
   };
 
   int get bulletStyle => switch (shipNumber) {
-    4 => 1,
-    5 => 2,
-    6 => 3,
-    7 => 1,
-    8 => 2,
+    1 => 1,
+    3 => 2,
+    4 => 3,
+    5 => 4,
+    6 => 5,
+    7 => 6,
+    8 => 7,
     _ => 0,
   };
 
   double get bulletSizeBonus => switch (shipNumber) {
-    4 => 5.0,
-    6 => 4.0,
-    8 => 3.0,
     _ => 0.0,
   };
 
@@ -2134,13 +2587,14 @@ class Player extends SpriteComponent with CollisionCallbacks {
     int style = 0,
   }) {
     final bullet = PlayerBullet();
-    final bulletSize =
-        PlayerBullet.bulletSize +
-        min(bulletDamage - 1, 4).toDouble() +
-        sizeBonus;
+    final bulletSize = PlayerBullet.laserSizeFor(
+      damage: bulletDamage,
+      sizeBonus: sizeBonus,
+      style: style,
+    );
     bullet.position =
         position.clone() +
-        Vector2(size.x / 2 + offsetX - bulletSize / 2, -bulletSize);
+        Vector2(size.x / 2 + offsetX - bulletSize.x / 2, -bulletSize.y);
     bullet.direction = dir.normalized();
     bullet.damage = bulletDamage;
     bullet.color = color;
@@ -2155,8 +2609,120 @@ class Player extends SpriteComponent with CollisionCallbacks {
 
   void resetPowerups() {
     rapidFireTimer = 0.0;
+    shieldTimer = 0.0;
     shootTimer = 0.0;
     weaponLevel = 1;
+  }
+
+  @override
+  void render(Canvas canvas) {
+    super.render(canvas);
+    if (shieldTimer <= 0) return;
+
+    final center = Offset(size.x / 2, size.y / 2);
+    final pulse = 0.5 + 0.5 * sin(shieldTimer * pi * 4);
+    final radius = size.x * (0.66 + pulse * 0.04);
+    canvas.drawCircle(
+      center,
+      radius,
+      Paint()
+        ..color = Colors.cyanAccent.withAlpha(55)
+        ..style = PaintingStyle.fill,
+    );
+    canvas.drawCircle(
+      center,
+      radius,
+      Paint()
+        ..color = Colors.cyanAccent.withAlpha(210)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 3,
+    );
+  }
+}
+
+class ShieldPowerup extends PositionComponent with CollisionCallbacks {
+  static const double itemSize = 34.0;
+  late Vector2 gameSize;
+  static const double fallSpeed = 150.0;
+
+  ShieldPowerup() : super(size: Vector2.all(itemSize)) {
+    add(CircleHitbox());
+  }
+
+  @override
+  void update(double dt) {
+    super.update(dt);
+    position.y += fallSpeed * dt;
+    if (parent != null) {
+      gameSize = (parent as MyGame).size;
+      if (position.y > gameSize.y + size.y) {
+        removeFromParent();
+      }
+    }
+  }
+
+  @override
+  void onCollision(Set<Vector2> intersectionPoints, PositionComponent other) {
+    super.onCollision(intersectionPoints, other);
+    if (other is Player) {
+      (parent as MyGame).collectShieldPowerup();
+      removeFromParent();
+    }
+  }
+
+  @override
+  void render(Canvas canvas) {
+    final center = Offset(size.x / 2, size.y / 2);
+    canvas.drawCircle(
+      center,
+      size.x * 0.44,
+      Paint()
+        ..color = Colors.cyanAccent.withAlpha(70)
+        ..style = PaintingStyle.fill,
+    );
+    canvas.drawCircle(
+      center,
+      size.x * 0.42,
+      Paint()
+        ..color = Colors.cyanAccent
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 3,
+    );
+
+    final shieldPath = Path()
+      ..moveTo(size.x * 0.5, size.y * 0.18)
+      ..quadraticBezierTo(
+        size.x * 0.76,
+        size.y * 0.28,
+        size.x * 0.76,
+        size.y * 0.42,
+      )
+      ..quadraticBezierTo(
+        size.x * 0.74,
+        size.y * 0.68,
+        size.x * 0.5,
+        size.y * 0.84,
+      )
+      ..quadraticBezierTo(
+        size.x * 0.26,
+        size.y * 0.68,
+        size.x * 0.24,
+        size.y * 0.42,
+      )
+      ..quadraticBezierTo(
+        size.x * 0.24,
+        size.y * 0.28,
+        size.x * 0.5,
+        size.y * 0.18,
+      )
+      ..close();
+    canvas.drawPath(
+      shieldPath,
+      Paint()
+        ..color = Colors.white.withAlpha(225)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 2,
+    );
   }
 }
 
@@ -2169,7 +2735,8 @@ class Background extends SpriteComponent {
 }
 
 class PlayerBullet extends PositionComponent with CollisionCallbacks {
-  static const double bulletSize = 8.0;
+  static const double laserWidth = 6.0;
+  static const double laserHeight = 22.0;
   static const double speed = 400.0;
   late Vector2 direction;
   int damage = 1;
@@ -2178,10 +2745,18 @@ class PlayerBullet extends PositionComponent with CollisionCallbacks {
   double sizeBonus = 0.0;
   int style = 0;
 
+  static Vector2 laserSizeFor({
+    required int damage,
+    required double sizeBonus,
+    required int style,
+  }) {
+    return Vector2(laserWidth, laserHeight);
+  }
+
   @override
   Future<void> onLoad() async {
-    size = Vector2.all(bulletSize + min(damage - 1, 4).toDouble() + sizeBonus);
-    add(CircleHitbox());
+    size = laserSizeFor(damage: damage, sizeBonus: sizeBonus, style: style);
+    add(RectangleHitbox());
   }
 
   @override
@@ -2206,6 +2781,8 @@ class PlayerBullet extends PositionComponent with CollisionCallbacks {
       other.health -= damage;
       removeFromParent(); // Remove bullet
       if (other.health <= 0) {
+        final defeatedEnemyPosition = other.position.clone();
+        final defeatedEnemyWasBoss = other.isBoss;
         // Enemy dies
         other.removeFromParent();
         (parent as MyGame).enemies.remove(other);
@@ -2226,6 +2803,10 @@ class PlayerBullet extends PositionComponent with CollisionCallbacks {
           game.spawnWeaponPowerup();
         }
 
+        if (defeatedEnemyWasBoss) {
+          game.spawnShieldPowerup(defeatedEnemyPosition);
+        }
+
         // Check if level complete
         if (game.enemies.isEmpty) {
           game.currentLevel++;
@@ -2243,34 +2824,144 @@ class PlayerBullet extends PositionComponent with CollisionCallbacks {
 
   @override
   void render(Canvas canvas) {
-    final paint = Paint()..color = color;
+    final glowPaint = Paint()
+      ..color = color.withAlpha(90)
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4);
+    final mainPaint = Paint()..color = color;
+    final corePaint = Paint()..color = Colors.white.withAlpha(230);
+    final hotPaint = Paint()..color = Colors.white;
+
+    void drawBeam({
+      required double width,
+      required double coreWidth,
+      Color? accent,
+      double radius = 5,
+    }) {
+      final centerX = size.x / 2;
+      final glowRect = RRect.fromRectAndRadius(
+        Rect.fromCenter(
+          center: Offset(centerX, size.y / 2),
+          width: width * 1.9,
+          height: size.y,
+        ),
+        Radius.circular(radius),
+      );
+      final beamRect = RRect.fromRectAndRadius(
+        Rect.fromCenter(
+          center: Offset(centerX, size.y / 2),
+          width: width,
+          height: size.y,
+        ),
+        Radius.circular(radius),
+      );
+      final coreRect = RRect.fromRectAndRadius(
+        Rect.fromCenter(
+          center: Offset(centerX, size.y / 2),
+          width: coreWidth,
+          height: size.y * 0.78,
+        ),
+        Radius.circular(radius),
+      );
+      final accentPaint = Paint()
+        ..color = accent ?? Colors.white.withAlpha(230);
+
+      canvas.drawRRect(glowRect, glowPaint);
+      canvas.drawRRect(beamRect, mainPaint);
+      canvas.drawRRect(coreRect, accent == null ? corePaint : accentPaint);
+      canvas.drawCircle(Offset(centerX, 2), width * 0.28, hotPaint);
+    }
 
     switch (style) {
       case 1:
-        canvas.drawCircle(Offset(size.x / 2, size.y / 2), size.x / 2, paint);
+        drawBeam(width: size.x * 0.72, coreWidth: size.x * 0.28);
       case 2:
         final path = Path()
           ..moveTo(size.x / 2, 0)
-          ..lineTo(size.x, size.y / 2)
-          ..lineTo(size.x / 2, size.y)
-          ..lineTo(0, size.y / 2)
+          ..lineTo(size.x * 0.85, size.y * 0.22)
+          ..lineTo(size.x * 0.64, size.y)
+          ..lineTo(size.x * 0.36, size.y)
+          ..lineTo(size.x * 0.15, size.y * 0.22)
           ..close();
-        canvas.drawPath(path, paint);
+        canvas.drawPath(path, glowPaint);
+        canvas.drawPath(path, mainPaint);
+        final core = Path()
+          ..moveTo(size.x / 2, size.y * 0.08)
+          ..lineTo(size.x * 0.6, size.y * 0.34)
+          ..lineTo(size.x / 2, size.y)
+          ..lineTo(size.x * 0.4, size.y * 0.34)
+          ..close();
+        canvas.drawPath(core, corePaint);
       case 3:
-        canvas.drawRRect(
-          RRect.fromRectAndRadius(
-            Rect.fromLTWH(
-              size.x * 0.25,
-              -size.y * 0.6,
-              size.x * 0.5,
-              size.y * 2,
-            ),
-            const Radius.circular(6),
-          ),
-          paint,
+        drawBeam(width: size.x * 0.74, coreWidth: size.x * 0.28);
+        canvas.drawLine(
+          Offset(size.x * 0.12, size.y * 0.24),
+          Offset(size.x * 0.12, size.y * 0.86),
+          Paint()
+            ..color = Colors.orangeAccent
+            ..strokeWidth = 1,
+        );
+        canvas.drawLine(
+          Offset(size.x * 0.88, size.y * 0.24),
+          Offset(size.x * 0.88, size.y * 0.86),
+          Paint()
+            ..color = Colors.orangeAccent
+            ..strokeWidth = 1,
+        );
+      case 4:
+        drawBeam(
+          width: size.x * 0.7,
+          coreWidth: size.x * 0.25,
+          accent: Colors.purple.shade100,
+        );
+        canvas.drawCircle(
+          Offset(size.x * 0.24, size.y * 0.4),
+          size.x * 0.08,
+          mainPaint,
+        );
+        canvas.drawCircle(
+          Offset(size.x * 0.76, size.y * 0.62),
+          size.x * 0.08,
+          mainPaint,
+        );
+      case 5:
+        drawBeam(width: size.x * 0.7, coreWidth: size.x * 0.22);
+        canvas.drawLine(
+          Offset(size.x * 0.2, size.y * 0.15),
+          Offset(size.x * 0.8, size.y * 0.85),
+          Paint()
+            ..color = Colors.greenAccent.withAlpha(180)
+            ..strokeWidth = 1,
+        );
+      case 6:
+        drawBeam(width: size.x * 0.68, coreWidth: size.x * 0.22);
+        final sidePaint = Paint()
+          ..color = Colors.deepOrangeAccent
+          ..strokeWidth = 1.5
+          ..strokeCap = StrokeCap.round;
+        canvas.drawLine(
+          Offset(size.x * 0.16, size.y * 0.2),
+          Offset(size.x * 0.32, size.y * 0.9),
+          sidePaint,
+        );
+        canvas.drawLine(
+          Offset(size.x * 0.84, size.y * 0.2),
+          Offset(size.x * 0.68, size.y * 0.9),
+          sidePaint,
+        );
+      case 7:
+        drawBeam(width: size.x * 0.72, coreWidth: size.x * 0.24);
+        canvas.drawCircle(
+          Offset(size.x / 2, size.y * 0.34),
+          size.x * 0.2,
+          glowPaint,
+        );
+        canvas.drawCircle(
+          Offset(size.x / 2, size.y * 0.34),
+          size.x * 0.12,
+          mainPaint,
         );
       default:
-        canvas.drawRect(Rect.fromLTWH(0, 0, size.x, size.y), paint);
+        drawBeam(width: size.x * 0.7, coreWidth: size.x * 0.24);
     }
   }
 }
@@ -2278,12 +2969,18 @@ class PlayerBullet extends PositionComponent with CollisionCallbacks {
 class Enemy extends SpriteComponent {
   static const double enemySize = 40.0;
   static const double bossSize = 120.0;
+  final Random movementRandom = Random();
   late Vector2 gameSize;
   late Player player;
   double shootTimer = 0.0;
   late double shootInterval;
   late double moveSpeed;
   double direction = 1.0; // 1 for right, -1 for left
+  double randomDirectionTimer = 0.0;
+  double randomSpeedMultiplier = 1.0;
+  double targetY = 0.0;
+  double entrySpeed = 180.0;
+  bool isEntering = true;
   late int health; // New: health system
   late int maxHealth; // New: max health system
   late int level;
@@ -2386,6 +3083,7 @@ class Enemy extends SpriteComponent {
 
     // Mais rápido a cada 10 níveis (começa em 50)
     moveSpeed = 50.0 + (difficultyTier * 20.0);
+    pickRandomMovement();
     if (difficultyTier >= 1) {
       // A partir do level 10, como tem menos naves, elas atiram BEM mais rápido para compensar
       shootInterval = max(0.4, 0.9 - (difficultyTier * 0.1));
@@ -2398,18 +3096,44 @@ class Enemy extends SpriteComponent {
   @override
   void update(double dt) {
     super.update(dt);
+
+    if (isEntering) {
+      final nextY = position.y + entrySpeed * dt;
+      if (nextY >= targetY - 1) {
+        position.y = targetY;
+        isEntering = false;
+      } else {
+        position.y = nextY;
+        return;
+      }
+    }
+
+    if (!isBoss) {
+      randomDirectionTimer -= dt;
+      if (randomDirectionTimer <= 0) {
+        pickRandomMovement();
+      }
+    }
+
     shootTimer += dt;
     if (shootTimer >= shootInterval) {
       shootTimer = 0.0;
       shoot();
     }
-    // Move left and right slowly
-    position.x += moveSpeed * direction * dt;
+    // Move left and right
+    position.x += moveSpeed * randomSpeedMultiplier * direction * dt;
     if (position.x <= 0 || position.x >= gameSize.x - size.x) {
       direction = -direction;
+      randomDirectionTimer = min(randomDirectionTimer, 0.35);
     }
     // Clamp to prevent sticking
     position.x = position.x.clamp(0.0, gameSize.x - size.x);
+  }
+
+  void pickRandomMovement() {
+    direction = movementRandom.nextBool() ? 1.0 : -1.0;
+    randomSpeedMultiplier = 0.65 + movementRandom.nextDouble() * 0.7;
+    randomDirectionTimer = 0.55 + movementRandom.nextDouble() * 1.45;
   }
 
   @override
