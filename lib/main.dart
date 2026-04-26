@@ -1992,15 +1992,16 @@ class Player extends SpriteComponent with CollisionCallbacks {
   double rapidFireTimer = 0.0;
   int weaponLevel = 1;
 
-  int get bulletDamage {
-    if (shipAsset == 'ship.png') return 1;
+  int get shipNumber {
+    if (shipAsset == 'ship.png') return 0;
 
     final match = RegExp(r'^ship(\d+)\.png$').firstMatch(shipAsset);
-    if (match == null) return 1;
+    if (match == null) return 0;
 
-    final shipNumber = int.tryParse(match.group(1) ?? '');
-    if (shipNumber == null) return 1;
+    return int.tryParse(match.group(1) ?? '') ?? 0;
+  }
 
+  int get bulletDamage {
     return shipNumber + 1;
   }
 
@@ -2075,16 +2076,13 @@ class Player extends SpriteComponent with CollisionCallbacks {
   }
 
   void shoot() {
-    if (weaponLevel == 1) {
-      _spawnBullet(Vector2(0, -1));
-    } else if (weaponLevel == 2) {
-      _spawnBullet(Vector2(-0.2, -1));
-      _spawnBullet(Vector2(0.2, -1));
-    } else {
-      _spawnBullet(Vector2(-0.3, -1));
-      _spawnBullet(Vector2(0, -1));
-      _spawnBullet(Vector2(0.3, -1));
-    }
+    _spawnBullet(
+      Vector2(0, -1),
+      color: bulletColor,
+      speedMultiplier: bulletSpeedMultiplier,
+      sizeBonus: bulletSizeBonus,
+      style: bulletStyle,
+    );
 
     // Play sound
     try {
@@ -2094,13 +2092,61 @@ class Player extends SpriteComponent with CollisionCallbacks {
     }
   }
 
-  void _spawnBullet(Vector2 dir) {
+  Color get bulletColor => switch (shipNumber) {
+    1 => Colors.lightBlueAccent,
+    3 => Colors.pinkAccent,
+    4 => Colors.amberAccent,
+    5 => Colors.purpleAccent,
+    6 => Colors.greenAccent,
+    7 => Colors.deepOrangeAccent,
+    8 => Colors.cyanAccent,
+    _ => Colors.cyan,
+  };
+
+  int get bulletStyle => switch (shipNumber) {
+    4 => 1,
+    5 => 2,
+    6 => 3,
+    7 => 1,
+    8 => 2,
+    _ => 0,
+  };
+
+  double get bulletSizeBonus => switch (shipNumber) {
+    4 => 5.0,
+    6 => 4.0,
+    8 => 3.0,
+    _ => 0.0,
+  };
+
+  double get bulletSpeedMultiplier => switch (shipNumber) {
+    6 => 1.45,
+    8 => 1.25,
+    _ => 1.0,
+  };
+
+  void _spawnBullet(
+    Vector2 dir, {
+    double offsetX = 0,
+    Color color = Colors.cyan,
+    double speedMultiplier = 1.0,
+    double sizeBonus = 0.0,
+    int style = 0,
+  }) {
     final bullet = PlayerBullet();
+    final bulletSize =
+        PlayerBullet.bulletSize +
+        min(bulletDamage - 1, 4).toDouble() +
+        sizeBonus;
     bullet.position =
         position.clone() +
-        Vector2(size.x / 2 - bullet.size.x / 2, -bullet.size.y);
+        Vector2(size.x / 2 + offsetX - bulletSize / 2, -bulletSize);
     bullet.direction = dir.normalized();
     bullet.damage = bulletDamage;
+    bullet.color = color;
+    bullet.speedMultiplier = speedMultiplier;
+    bullet.sizeBonus = sizeBonus;
+    bullet.style = style;
     (parent as MyGame).add(bullet);
   }
 
@@ -2127,17 +2173,21 @@ class PlayerBullet extends PositionComponent with CollisionCallbacks {
   static const double speed = 400.0;
   late Vector2 direction;
   int damage = 1;
+  Color color = Colors.cyan;
+  double speedMultiplier = 1.0;
+  double sizeBonus = 0.0;
+  int style = 0;
 
   @override
   Future<void> onLoad() async {
-    size = Vector2.all(bulletSize + min(damage - 1, 4).toDouble());
+    size = Vector2.all(bulletSize + min(damage - 1, 4).toDouble() + sizeBonus);
     add(CircleHitbox());
   }
 
   @override
   void update(double dt) {
     super.update(dt);
-    position += direction * speed * dt;
+    position += direction * speed * speedMultiplier * dt;
     // Remove if off screen
     final gameSize = (parent as MyGame).size;
     if (position.x < -size.x ||
@@ -2193,10 +2243,35 @@ class PlayerBullet extends PositionComponent with CollisionCallbacks {
 
   @override
   void render(Canvas canvas) {
-    canvas.drawRect(
-      Rect.fromLTWH(0, 0, size.x, size.y),
-      Paint()..color = damage > 1 ? Colors.lightBlueAccent : Colors.cyan,
-    );
+    final paint = Paint()..color = color;
+
+    switch (style) {
+      case 1:
+        canvas.drawCircle(Offset(size.x / 2, size.y / 2), size.x / 2, paint);
+      case 2:
+        final path = Path()
+          ..moveTo(size.x / 2, 0)
+          ..lineTo(size.x, size.y / 2)
+          ..lineTo(size.x / 2, size.y)
+          ..lineTo(0, size.y / 2)
+          ..close();
+        canvas.drawPath(path, paint);
+      case 3:
+        canvas.drawRRect(
+          RRect.fromRectAndRadius(
+            Rect.fromLTWH(
+              size.x * 0.25,
+              -size.y * 0.6,
+              size.x * 0.5,
+              size.y * 2,
+            ),
+            const Radius.circular(6),
+          ),
+          paint,
+        );
+      default:
+        canvas.drawRect(Rect.fromLTWH(0, 0, size.x, size.y), paint);
+    }
   }
 }
 
