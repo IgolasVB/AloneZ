@@ -685,6 +685,10 @@ class _GameplayHudViewState extends State<GameplayHudView> {
     final hasStoredShield = game.storedShields > 0;
     final isShieldActive = game.player.shieldTimer > 0;
     final canUseShield = hasStoredShield && !isShieldActive && !game.isGameOver;
+    final hasStoredRapidFire = game.storedRapidFires > 0;
+    final isRapidFireActive = game.player.rapidFireTimer > 0;
+    final canUseRapidFire =
+        hasStoredRapidFire && !isRapidFireActive && !game.isGameOver;
 
     return Stack(
       children: [
@@ -771,6 +775,91 @@ class _GameplayHudViewState extends State<GameplayHudView> {
                       textAlign: TextAlign.center,
                       style: const TextStyle(
                         color: Colors.cyanAccent,
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        shadows: [Shadow(blurRadius: 6, color: Colors.black)],
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ),
+        Positioned(
+          top: 184,
+          right: 10,
+          child: Material(
+            color: Colors.transparent,
+            child: Stack(
+              clipBehavior: Clip.none,
+              children: [
+                IconButton(
+                  tooltip: 'Usar tiro rapido',
+                  onPressed: canUseRapidFire
+                      ? () {
+                          game.useStoredRapidFire();
+                          setState(() {});
+                        }
+                      : null,
+                  icon: Icon(
+                    Icons.flash_on,
+                    color: isRapidFireActive
+                        ? Colors.amberAccent
+                        : hasStoredRapidFire
+                        ? Colors.white
+                        : Colors.white38,
+                    size: 34,
+                  ),
+                  style: IconButton.styleFrom(
+                    backgroundColor: const Color(0x99020712),
+                    disabledBackgroundColor: const Color(0x66020712),
+                    fixedSize: const Size(54, 54),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      side: BorderSide(
+                        color: isRapidFireActive
+                            ? Colors.amberAccent
+                            : const Color(0xFFFFD54F),
+                        width: 2,
+                      ),
+                    ),
+                  ),
+                ),
+                Positioned(
+                  right: -3,
+                  top: -3,
+                  child: Container(
+                    height: 22,
+                    constraints: const BoxConstraints(minWidth: 22),
+                    alignment: Alignment.center,
+                    padding: const EdgeInsets.symmetric(horizontal: 5),
+                    decoration: BoxDecoration(
+                      color: hasStoredRapidFire
+                          ? Colors.amberAccent
+                          : const Color(0xFF777777),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.white, width: 1.5),
+                    ),
+                    child: Text(
+                      '${game.storedRapidFires}',
+                      style: const TextStyle(
+                        color: Colors.black,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                  ),
+                ),
+                if (isRapidFireActive)
+                  Positioned(
+                    left: -5,
+                    right: -5,
+                    bottom: -18,
+                    child: Text(
+                      '${game.player.rapidFireTimer.ceil()}s',
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                        color: Colors.amberAccent,
                         fontSize: 14,
                         fontWeight: FontWeight.bold,
                         shadows: [Shadow(blurRadius: 6, color: Colors.black)],
@@ -1553,6 +1642,7 @@ class MyGame extends FlameGame
   int coins = 0;
   int matchCoins = 0;
   int storedShields = 0;
+  int storedRapidFires = 0;
   int destroyEnemiesMissionProgress = 0;
   int destroyEnemiesMissionClaimedAt = 0;
   int reachLevelMissionProgress = 1;
@@ -2242,6 +2332,11 @@ class MyGame extends FlameGame
     onShieldStateChanged?.call();
   }
 
+  void collectWeaponPowerup() {
+    storedRapidFires++;
+    onShieldStateChanged?.call();
+  }
+
   bool useStoredShield() {
     if (storedShields <= 0 || player.shieldTimer > 0 || isGameOver) {
       return false;
@@ -2249,6 +2344,17 @@ class MyGame extends FlameGame
 
     storedShields--;
     player.activateShield();
+    onShieldStateChanged?.call();
+    return true;
+  }
+
+  bool useStoredRapidFire() {
+    if (storedRapidFires <= 0 || player.rapidFireTimer > 0 || isGameOver) {
+      return false;
+    }
+
+    storedRapidFires--;
+    player.activateRapidFire();
     onShieldStateChanged?.call();
     return true;
   }
@@ -2317,12 +2423,28 @@ class MyGame extends FlameGame
     updateMatchCoins();
   }
 
+  void clearActiveRunComponents() {
+    removeWhere(
+      (component) =>
+          component is Enemy ||
+          component is Bullet ||
+          component is PlayerBullet ||
+          component is Explosion ||
+          component is HeartPowerup ||
+          component is WeaponPowerup ||
+          component is ShieldPowerup,
+    );
+    processLifecycleEvents();
+    enemies.clear();
+  }
+
   void restart() {
     isGameOver = false;
     score = 0;
     matchCoins = 0;
     matchCoinsSaved = false;
     storedShields = 0;
+    storedRapidFires = 0;
     currentLevel = 1;
     player.lives = 3;
     player.hitCount = 0;
@@ -2338,25 +2460,7 @@ class MyGame extends FlameGame
       size.y - Player.playerSize - 20,
     );
 
-    children.whereType<Enemy>().forEach((enemy) => enemy.removeFromParent());
-    children.whereType<Bullet>().forEach((bullet) => bullet.removeFromParent());
-    children.whereType<PlayerBullet>().forEach(
-      (bullet) => bullet.removeFromParent(),
-    );
-    children.whereType<Explosion>().forEach(
-      (explosion) => explosion.removeFromParent(),
-    );
-    children.whereType<HeartPowerup>().forEach(
-      (heart) => heart.removeFromParent(),
-    );
-    children.whereType<WeaponPowerup>().forEach(
-      (powerup) => powerup.removeFromParent(),
-    );
-    children.whereType<ShieldPowerup>().forEach(
-      (powerup) => powerup.removeFromParent(),
-    );
-
-    enemies.clear();
+    clearActiveRunComponents();
     spawnLevel();
     overlays.add('PauseButton');
     resumeEngine();
@@ -2368,6 +2472,7 @@ class MyGame extends FlameGame
     matchCoins = 0;
     matchCoinsSaved = false;
     storedShields = 0;
+    storedRapidFires = 0;
     currentLevel = 1;
     player.lives = 3;
     player.hitCount = 0;
@@ -2384,25 +2489,7 @@ class MyGame extends FlameGame
       size.y - Player.playerSize - 20,
     );
 
-    children.whereType<Enemy>().forEach((enemy) => enemy.removeFromParent());
-    children.whereType<Bullet>().forEach((bullet) => bullet.removeFromParent());
-    children.whereType<PlayerBullet>().forEach(
-      (bullet) => bullet.removeFromParent(),
-    );
-    children.whereType<Explosion>().forEach(
-      (explosion) => explosion.removeFromParent(),
-    );
-    children.whereType<HeartPowerup>().forEach(
-      (heart) => heart.removeFromParent(),
-    );
-    children.whereType<WeaponPowerup>().forEach(
-      (powerup) => powerup.removeFromParent(),
-    );
-    children.whereType<ShieldPowerup>().forEach(
-      (powerup) => powerup.removeFromParent(),
-    );
-
-    enemies.clear();
+    clearActiveRunComponents();
     spawnLevel();
 
     overlays.remove('PauseMenu');
@@ -2417,7 +2504,6 @@ class MyGame extends FlameGame
 class Player extends SpriteComponent with CollisionCallbacks {
   static const double speed = 200.0;
   static const double playerSize = 50.0;
-  static const double normalShootInterval = 1.0;
   static const double rapidFireShootInterval = 0.07;
 
   String shipAsset = 'ship.png';
@@ -2446,6 +2532,17 @@ class Player extends SpriteComponent with CollisionCallbacks {
   int get bulletDamage {
     return shipNumber + 1;
   }
+
+  double get normalShootInterval => switch (shipNumber) {
+    1 => 0.9,
+    3 => 0.8,
+    4 => 0.7,
+    5 => 0.6,
+    6 => 0.5,
+    7 => 0.4,
+    8 => 0.3,
+    _ => 1.0,
+  };
 
   @override
   Future<void> onLoad() async {
@@ -2520,7 +2617,7 @@ class Player extends SpriteComponent with CollisionCallbacks {
   }
 
   void activateRapidFire() {
-    rapidFireTimer = 10.0;
+    rapidFireTimer = 5.0;
     shootTimer = shootInterval;
   }
 
@@ -3423,7 +3520,7 @@ class WeaponPowerup extends PositionComponent with CollisionCallbacks {
   void onCollision(Set<Vector2> intersectionPoints, PositionComponent other) {
     super.onCollision(intersectionPoints, other);
     if (other is Player) {
-      other.activateRapidFire();
+      (parent as MyGame).collectWeaponPowerup();
       removeFromParent();
     }
   }
