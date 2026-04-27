@@ -47,6 +47,32 @@ enum ShipUpgradeType {
   doubleShot,
 }
 
+enum ControlMode { drag, joystick }
+
+extension ControlModeDetails on ControlMode {
+  String get storageValue => switch (this) {
+    ControlMode.drag => 'drag',
+    ControlMode.joystick => 'joystick',
+  };
+
+  String get title => switch (this) {
+    ControlMode.drag => 'ARRASTAR',
+    ControlMode.joystick => 'ANALOGICO',
+  };
+
+  String get description => switch (this) {
+    ControlMode.drag => 'Mover arrastando e tiro automatico.',
+    ControlMode.joystick => 'Mover no analogico e atirar no botao.',
+  };
+
+  static ControlMode fromStorage(String? value) {
+    return ControlMode.values.firstWhere(
+      (mode) => mode.storageValue == value,
+      orElse: () => ControlMode.drag,
+    );
+  }
+}
+
 extension ShipUpgradeTypeDetails on ShipUpgradeType {
   String get title => switch (this) {
     ShipUpgradeType.damage => 'DANO +1',
@@ -169,7 +195,45 @@ class MyApp extends StatelessWidget {
                         ],
                       ),
                     ),
+                    Positioned(
+                      right: 12,
+                      top: 12,
+                      child: Material(
+                        color: Colors.transparent,
+                        child: IconButton(
+                          onPressed: () {
+                            game.overlays.remove('StartMenu');
+                            game.overlays.add('SettingsMenu');
+                          },
+                          icon: const Icon(Icons.settings),
+                          color: Colors.white,
+                          iconSize: 34,
+                          tooltip: 'Configuracoes',
+                          style: IconButton.styleFrom(
+                            backgroundColor: const Color(0x99020712),
+                            foregroundColor: Colors.white,
+                            fixedSize: const Size(54, 54),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                              side: const BorderSide(
+                                color: Colors.cyan,
+                                width: 2,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
                   ],
+                );
+              },
+              'SettingsMenu': (BuildContext context, MyGame game) {
+                return SettingsMenuView(
+                  game: game,
+                  onBack: () {
+                    game.overlays.remove('SettingsMenu');
+                    game.overlays.add('StartMenu');
+                  },
                 );
               },
               'MissionsMenu': (BuildContext context, MyGame game) {
@@ -1031,7 +1095,117 @@ class _GameplayHudViewState extends State<GameplayHudView> {
             ],
           ),
         ),
+        if (game.controlMode == ControlMode.joystick) ...[
+          Positioned(left: 42, bottom: 58, child: MovementJoystick(game: game)),
+          Positioned(right: 22, bottom: 58, child: FireButton(game: game)),
+        ],
       ],
+    );
+  }
+}
+
+class MovementJoystick extends StatefulWidget {
+  final MyGame game;
+
+  const MovementJoystick({super.key, required this.game});
+
+  @override
+  State<MovementJoystick> createState() => _MovementJoystickState();
+}
+
+class _MovementJoystickState extends State<MovementJoystick> {
+  static const double baseSize = 92;
+  static const double knobSize = 36;
+  Offset knobOffset = Offset.zero;
+
+  void _update(Offset localPosition) {
+    final center = const Offset(baseSize / 2, baseSize / 2);
+    final raw = localPosition - center;
+    final maxDistance = (baseSize - knobSize) / 2;
+    final distance = raw.distance;
+    final clamped = distance > maxDistance
+        ? Offset.fromDirection(raw.direction, maxDistance)
+        : raw;
+
+    setState(() {
+      knobOffset = clamped;
+    });
+
+    final normalized = clamped / maxDistance;
+    widget.game.player.hudMoveDirection = Vector2(normalized.dx, normalized.dy);
+  }
+
+  void _reset() {
+    setState(() {
+      knobOffset = Offset.zero;
+    });
+    widget.game.player.hudMoveDirection = Vector2.zero();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onPanStart: (details) => _update(details.localPosition),
+      onPanUpdate: (details) => _update(details.localPosition),
+      onPanEnd: (_) => _reset(),
+      onPanCancel: _reset,
+      child: Container(
+        width: baseSize,
+        height: baseSize,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          color: const Color(0x66020712),
+          border: Border.all(color: Colors.cyanAccent, width: 2),
+        ),
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            Transform.translate(
+              offset: knobOffset,
+              child: Container(
+                width: knobSize,
+                height: knobSize,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: Colors.white.withAlpha(210),
+                  border: Border.all(color: Colors.cyanAccent, width: 2),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class FireButton extends StatelessWidget {
+  final MyGame game;
+
+  const FireButton({super.key, required this.game});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTapDown: (_) => game.player.startHudFiring(),
+      onTapUp: (_) => game.player.stopHudFiring(),
+      onTapCancel: game.player.stopHudFiring,
+      child: Container(
+        width: 76,
+        height: 76,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          color: const Color(0x99020712),
+          border: Border.all(color: Colors.redAccent, width: 3),
+          boxShadow: const [BoxShadow(color: Colors.black87, blurRadius: 10)],
+        ),
+        child: const Icon(
+          Icons.local_fire_department,
+          color: Colors.redAccent,
+          size: 38,
+        ),
+      ),
     );
   }
 }
@@ -1144,6 +1318,135 @@ class FixedBackArrow extends StatelessWidget {
               side: const BorderSide(color: Colors.cyan, width: 2),
             ),
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class SettingsMenuView extends StatefulWidget {
+  final MyGame game;
+  final VoidCallback onBack;
+
+  const SettingsMenuView({super.key, required this.game, required this.onBack});
+
+  @override
+  State<SettingsMenuView> createState() => _SettingsMenuViewState();
+}
+
+class _SettingsMenuViewState extends State<SettingsMenuView> {
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      children: [
+        Positioned.fill(
+          child: Image.asset('assets/images/fundomenu.png', fit: BoxFit.cover),
+        ),
+        Positioned.fill(child: Container(color: const Color(0xAA000000))),
+        Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text(
+                'CONFIGURACOES',
+                style: TextStyle(
+                  color: Colors.cyan,
+                  fontSize: 42,
+                  fontWeight: FontWeight.w900,
+                  shadows: [Shadow(blurRadius: 10, color: Colors.black)],
+                ),
+              ),
+              const SizedBox(height: 34),
+              const Text(
+                'CONTROLE',
+                style: TextStyle(
+                  color: Colors.amberAccent,
+                  fontSize: 18,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: 2,
+                  shadows: [Shadow(blurRadius: 8, color: Colors.black)],
+                ),
+              ),
+              const SizedBox(height: 14),
+              Wrap(
+                spacing: 14,
+                runSpacing: 14,
+                alignment: WrapAlignment.center,
+                children: ControlMode.values
+                    .map(
+                      (mode) => ControlModeButton(
+                        mode: mode,
+                        selected: widget.game.controlMode == mode,
+                        onPressed: () {
+                          widget.game.setControlMode(mode);
+                          setState(() {});
+                        },
+                      ),
+                    )
+                    .toList(),
+              ),
+            ],
+          ),
+        ),
+        FixedBackArrow(onPressed: widget.onBack),
+      ],
+    );
+  }
+}
+
+class ControlModeButton extends StatelessWidget {
+  final ControlMode mode;
+  final bool selected;
+  final VoidCallback onPressed;
+
+  const ControlModeButton({
+    super.key,
+    required this.mode,
+    required this.selected,
+    required this.onPressed,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: 180,
+      height: 112,
+      child: ElevatedButton(
+        onPressed: selected ? null : onPressed,
+        style: ElevatedButton.styleFrom(
+          padding: const EdgeInsets.all(12),
+          backgroundColor: selected ? Colors.amber : const Color(0xEE071B38),
+          foregroundColor: selected ? Colors.black : Colors.white,
+          disabledBackgroundColor: Colors.amber,
+          disabledForegroundColor: Colors.black,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(8),
+            side: BorderSide(
+              color: selected ? Colors.white : Colors.cyan,
+              width: 2,
+            ),
+          ),
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              mode == ControlMode.drag ? Icons.swipe : Icons.gamepad,
+              size: 30,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              mode.title,
+              style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w900),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              mode.description,
+              textAlign: TextAlign.center,
+              maxLines: 2,
+              style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
+            ),
+          ],
         ),
       ),
     );
@@ -1823,6 +2126,7 @@ class MyGame extends FlameGame
   bool ownsShip7 = false;
   bool ownsShip8 = false;
   String selectedShipAsset = 'ship.png';
+  ControlMode controlMode = ControlMode.drag;
   RewardedAd? _freeCoinsRewardedAd;
   bool _isFreeCoinsAdLoading = false;
   bool _isFreeCoinsAdShowing = false;
@@ -1874,6 +2178,9 @@ class MyGame extends FlameGame
     ownsShip7 = prefs.getBool('ownsShip7') ?? false;
     ownsShip8 = prefs.getBool('ownsShip8') ?? false;
     selectedShipAsset = prefs.getString('selectedShipAsset') ?? 'ship.png';
+    controlMode = ControlModeDetails.fromStorage(
+      prefs.getString('controlMode'),
+    );
     if (!isShipUnlocked(selectedShipAsset)) {
       selectedShipAsset = 'ship.png';
       prefs.setString('selectedShipAsset', selectedShipAsset);
@@ -2032,11 +2339,13 @@ class MyGame extends FlameGame
 
   @override
   void onPanUpdate(DragUpdateInfo info) {
+    if (controlMode != ControlMode.drag) return;
     player.position += info.delta.global;
   }
 
   @override
   void onTapDown(TapDownInfo info) {
+    if (controlMode != ControlMode.drag) return;
     player.shoot();
   }
 
@@ -2388,6 +2697,12 @@ class MyGame extends FlameGame
     player.sprite = await Sprite.load(selectedShipAsset);
   }
 
+  void setControlMode(ControlMode mode) {
+    controlMode = mode;
+    prefs.setString('controlMode', mode.storageValue);
+    player.stopHudControls();
+  }
+
   bool buyShip1() {
     if (!canBuyShip1) return false;
 
@@ -2719,6 +3034,8 @@ class Player extends SpriteComponent with CollisionCallbacks {
   bool isMovingRight = false;
   bool isMovingUp = false;
   bool isMovingDown = false;
+  bool isHudFiring = false;
+  Vector2 hudMoveDirection = Vector2.zero();
 
   late Vector2 gameSize;
   int lives = 3;
@@ -2782,6 +3099,9 @@ class Player extends SpriteComponent with CollisionCallbacks {
     if (isMovingDown) {
       position.y += speed * dt;
     }
+    if (hudMoveDirection.length2 > 0) {
+      position += hudMoveDirection * speed * dt;
+    }
     // Clamp position to screen boundaries
     position.x = position.x.clamp(0.0, gameSize.x - size.x);
     position.y = position.y.clamp(0.0, gameSize.y - size.y);
@@ -2801,7 +3121,10 @@ class Player extends SpriteComponent with CollisionCallbacks {
     }
 
     shootTimer += dt;
-    if (shootTimer >= shootInterval) {
+    final autoShootEnabled =
+        parent is MyGame && (parent as MyGame).controlMode == ControlMode.drag;
+    final shouldShoot = autoShootEnabled || isHudFiring;
+    if (shouldShoot && shootTimer >= shootInterval) {
       shootTimer = 0.0;
       shoot();
     }
@@ -2839,6 +3162,20 @@ class Player extends SpriteComponent with CollisionCallbacks {
   void activateShield() {
     shieldTimer = 5.0 + shieldDurationBonus;
     (parent as MyGame).onShieldStateChanged?.call();
+  }
+
+  void startHudFiring() {
+    isHudFiring = true;
+    shootTimer = shootInterval;
+  }
+
+  void stopHudFiring() {
+    isHudFiring = false;
+  }
+
+  void stopHudControls() {
+    isHudFiring = false;
+    hudMoveDirection = Vector2.zero();
   }
 
   void applyUpgrade(ShipUpgradeType upgrade) {
@@ -2952,6 +3289,7 @@ class Player extends SpriteComponent with CollisionCallbacks {
     rapidFireTimer = 0.0;
     shieldTimer = 0.0;
     shootTimer = 0.0;
+    stopHudControls();
     weaponLevel = 1;
     damageUpgrade = 0;
     fireRateMultiplier = 1.0;
