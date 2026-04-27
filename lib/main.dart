@@ -39,6 +39,48 @@ String get freeCoinsRewardedAdUnitId {
   }
 }
 
+enum ShipUpgradeType {
+  damage,
+  fireRate,
+  bulletSpeed,
+  shieldDuration,
+  doubleShot,
+}
+
+extension ShipUpgradeTypeDetails on ShipUpgradeType {
+  String get title => switch (this) {
+    ShipUpgradeType.damage => 'DANO +1',
+    ShipUpgradeType.fireRate => 'TIRO +10%',
+    ShipUpgradeType.bulletSpeed => 'LASER +15%',
+    ShipUpgradeType.shieldDuration => 'ESCUDO +2S',
+    ShipUpgradeType.doubleShot => 'TIRO DUPLO',
+  };
+
+  String get description => switch (this) {
+    ShipUpgradeType.damage => 'Seus tiros causam mais dano.',
+    ShipUpgradeType.fireRate => 'Sua nave atira mais rapido.',
+    ShipUpgradeType.bulletSpeed => 'Seus lasers viajam mais rapido.',
+    ShipUpgradeType.shieldDuration => 'Escudos duram mais tempo.',
+    ShipUpgradeType.doubleShot => 'Dispara dois lasers por vez.',
+  };
+
+  IconData get icon => switch (this) {
+    ShipUpgradeType.damage => Icons.local_fire_department,
+    ShipUpgradeType.fireRate => Icons.bolt,
+    ShipUpgradeType.bulletSpeed => Icons.speed,
+    ShipUpgradeType.shieldDuration => Icons.shield,
+    ShipUpgradeType.doubleShot => Icons.call_split,
+  };
+
+  Color get color => switch (this) {
+    ShipUpgradeType.damage => Colors.redAccent,
+    ShipUpgradeType.fireRate => Colors.amberAccent,
+    ShipUpgradeType.bulletSpeed => Colors.lightBlueAccent,
+    ShipUpgradeType.shieldDuration => Colors.cyanAccent,
+    ShipUpgradeType.doubleShot => Colors.greenAccent,
+  };
+}
+
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
@@ -432,6 +474,9 @@ class MyApp extends StatelessWidget {
                   ),
                 );
               },
+              'BossUpgrade': (BuildContext context, MyGame game) {
+                return BossUpgradeView(game: game);
+              },
               'PauseButton': (BuildContext context, MyGame game) {
                 return GameplayHudView(
                   game: game,
@@ -642,6 +687,111 @@ class CoinCounter extends StatelessWidget {
   }
 }
 
+class BossUpgradeView extends StatelessWidget {
+  final MyGame game;
+
+  const BossUpgradeView({super.key, required this.game});
+
+  @override
+  Widget build(BuildContext context) {
+    final screenSize = MediaQuery.sizeOf(context);
+    final center = game.upgradeSelectionPosition;
+    final left = (center.x - 92).clamp(8.0, screenSize.width - 200);
+    final top = center.y.clamp(80.0, screenSize.height - 88);
+
+    return Stack(
+      children: [
+        Positioned(
+          left: left,
+          top: top,
+          child: Material(
+            color: Colors.transparent,
+            child: Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: const Color(0xD0071B38),
+                border: Border.all(color: Colors.white70, width: 1.5),
+                borderRadius: BorderRadius.circular(8),
+                boxShadow: const [
+                  BoxShadow(
+                    color: Colors.black87,
+                    blurRadius: 10,
+                    offset: Offset(2, 3),
+                  ),
+                ],
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: game.currentUpgradeOptions
+                    .map(
+                      (upgrade) => Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 4),
+                        child: BossUpgradeIcon(
+                          upgrade: upgrade,
+                          onPressed: () => game.applyBossUpgrade(upgrade),
+                        ),
+                      ),
+                    )
+                    .toList(),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class BossUpgradeIcon extends StatelessWidget {
+  final ShipUpgradeType upgrade;
+  final VoidCallback onPressed;
+
+  const BossUpgradeIcon({
+    super.key,
+    required this.upgrade,
+    required this.onPressed,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Tooltip(
+      message: '${upgrade.title}\n${upgrade.description}',
+      child: SizedBox(
+        width: 84,
+        height: 64,
+        child: IconButton(
+          onPressed: onPressed,
+          style: IconButton.styleFrom(
+            backgroundColor: const Color(0x99020712),
+            fixedSize: const Size(84, 64),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(8),
+              side: BorderSide(color: upgrade.color, width: 2),
+            ),
+          ),
+          icon: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(upgrade.icon, color: upgrade.color, size: 24),
+              const SizedBox(height: 3),
+              Text(
+                upgrade.title,
+                textAlign: TextAlign.center,
+                maxLines: 1,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 10,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class GameplayHudView extends StatefulWidget {
   final MyGame game;
   final VoidCallback onPause;
@@ -689,6 +839,11 @@ class _GameplayHudViewState extends State<GameplayHudView> {
     final isRapidFireActive = game.player.rapidFireTimer > 0;
     final canUseRapidFire =
         hasStoredRapidFire && !isRapidFireActive && !game.isGameOver;
+    final screenHeight = MediaQuery.sizeOf(context).height;
+    final actionButtonsTop = (screenHeight * 0.42).clamp(
+      220.0,
+      screenHeight - 170.0,
+    );
 
     return Stack(
       children: [
@@ -701,173 +856,179 @@ class _GameplayHudViewState extends State<GameplayHudView> {
           ),
         ),
         Positioned(
-          top: 112,
+          top: actionButtonsTop,
           right: 10,
-          child: Material(
-            color: Colors.transparent,
-            child: Stack(
-              clipBehavior: Clip.none,
-              children: [
-                IconButton(
-                  tooltip: 'Usar escudo',
-                  onPressed: canUseShield
-                      ? () {
-                          game.useStoredShield();
-                          setState(() {});
-                        }
-                      : null,
-                  icon: Icon(
-                    Icons.shield,
-                    color: isShieldActive
-                        ? Colors.cyanAccent
-                        : hasStoredShield
-                        ? Colors.white
-                        : Colors.white38,
-                    size: 34,
-                  ),
-                  style: IconButton.styleFrom(
-                    backgroundColor: const Color(0x99020712),
-                    disabledBackgroundColor: const Color(0x66020712),
-                    fixedSize: const Size(54, 54),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
-                      side: BorderSide(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Material(
+                color: Colors.transparent,
+                child: Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    IconButton(
+                      tooltip: 'Usar escudo',
+                      onPressed: canUseShield
+                          ? () {
+                              game.useStoredShield();
+                              setState(() {});
+                            }
+                          : null,
+                      icon: Icon(
+                        Icons.shield,
                         color: isShieldActive
                             ? Colors.cyanAccent
-                            : const Color(0xFF5EDCFF),
-                        width: 2,
+                            : hasStoredShield
+                            ? Colors.white
+                            : Colors.white38,
+                        size: 26,
+                      ),
+                      style: IconButton.styleFrom(
+                        backgroundColor: const Color(0x99020712),
+                        disabledBackgroundColor: const Color(0x66020712),
+                        fixedSize: const Size(42, 42),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                          side: BorderSide(
+                            color: isShieldActive
+                                ? Colors.cyanAccent
+                                : const Color(0xFF5EDCFF),
+                            width: 2,
+                          ),
+                        ),
                       ),
                     ),
-                  ),
+                    Positioned(
+                      right: -3,
+                      top: -3,
+                      child: Container(
+                        height: 22,
+                        constraints: const BoxConstraints(minWidth: 18),
+                        alignment: Alignment.center,
+                        padding: const EdgeInsets.symmetric(horizontal: 5),
+                        decoration: BoxDecoration(
+                          color: hasStoredShield
+                              ? Colors.cyanAccent
+                              : const Color(0xFF777777),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: Colors.white, width: 1.5),
+                        ),
+                        child: Text(
+                          '${game.storedShields}',
+                          style: const TextStyle(
+                            color: Colors.black,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                      ),
+                    ),
+                    if (isShieldActive)
+                      Positioned(
+                        left: -5,
+                        right: -5,
+                        bottom: -18,
+                        child: Text(
+                          '${game.player.shieldTimer.ceil()}s',
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(
+                            color: Colors.cyanAccent,
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            shadows: [
+                              Shadow(blurRadius: 6, color: Colors.black),
+                            ],
+                          ),
+                        ),
+                      ),
+                  ],
                 ),
-                Positioned(
-                  right: -3,
-                  top: -3,
-                  child: Container(
-                    height: 22,
-                    constraints: const BoxConstraints(minWidth: 22),
-                    alignment: Alignment.center,
-                    padding: const EdgeInsets.symmetric(horizontal: 5),
-                    decoration: BoxDecoration(
-                      color: hasStoredShield
-                          ? Colors.cyanAccent
-                          : const Color(0xFF777777),
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: Colors.white, width: 1.5),
-                    ),
-                    child: Text(
-                      '${game.storedShields}',
-                      style: const TextStyle(
-                        color: Colors.black,
-                        fontSize: 13,
-                        fontWeight: FontWeight.w900,
-                      ),
-                    ),
-                  ),
-                ),
-                if (isShieldActive)
-                  Positioned(
-                    left: -5,
-                    right: -5,
-                    bottom: -18,
-                    child: Text(
-                      '${game.player.shieldTimer.ceil()}s',
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(
-                        color: Colors.cyanAccent,
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
-                        shadows: [Shadow(blurRadius: 6, color: Colors.black)],
-                      ),
-                    ),
-                  ),
-              ],
-            ),
-          ),
-        ),
-        Positioned(
-          top: 184,
-          right: 10,
-          child: Material(
-            color: Colors.transparent,
-            child: Stack(
-              clipBehavior: Clip.none,
-              children: [
-                IconButton(
-                  tooltip: 'Usar tiro rapido',
-                  onPressed: canUseRapidFire
-                      ? () {
-                          game.useStoredRapidFire();
-                          setState(() {});
-                        }
-                      : null,
-                  icon: Icon(
-                    Icons.flash_on,
-                    color: isRapidFireActive
-                        ? Colors.amberAccent
-                        : hasStoredRapidFire
-                        ? Colors.white
-                        : Colors.white38,
-                    size: 34,
-                  ),
-                  style: IconButton.styleFrom(
-                    backgroundColor: const Color(0x99020712),
-                    disabledBackgroundColor: const Color(0x66020712),
-                    fixedSize: const Size(54, 54),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
-                      side: BorderSide(
+              ),
+              const SizedBox(height: 14),
+              Material(
+                color: Colors.transparent,
+                child: Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    IconButton(
+                      tooltip: 'Usar tiro rapido',
+                      onPressed: canUseRapidFire
+                          ? () {
+                              game.useStoredRapidFire();
+                              setState(() {});
+                            }
+                          : null,
+                      icon: Icon(
+                        Icons.flash_on,
                         color: isRapidFireActive
                             ? Colors.amberAccent
-                            : const Color(0xFFFFD54F),
-                        width: 2,
+                            : hasStoredRapidFire
+                            ? Colors.white
+                            : Colors.white38,
+                        size: 26,
+                      ),
+                      style: IconButton.styleFrom(
+                        backgroundColor: const Color(0x99020712),
+                        disabledBackgroundColor: const Color(0x66020712),
+                        fixedSize: const Size(42, 42),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                          side: BorderSide(
+                            color: isRapidFireActive
+                                ? Colors.amberAccent
+                                : const Color(0xFFFFD54F),
+                            width: 2,
+                          ),
+                        ),
                       ),
                     ),
-                  ),
+                    Positioned(
+                      right: -3,
+                      top: -3,
+                      child: Container(
+                        height: 22,
+                        constraints: const BoxConstraints(minWidth: 18),
+                        alignment: Alignment.center,
+                        padding: const EdgeInsets.symmetric(horizontal: 5),
+                        decoration: BoxDecoration(
+                          color: hasStoredRapidFire
+                              ? Colors.amberAccent
+                              : const Color(0xFF777777),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: Colors.white, width: 1.5),
+                        ),
+                        child: Text(
+                          '${game.storedRapidFires}',
+                          style: const TextStyle(
+                            color: Colors.black,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                      ),
+                    ),
+                    if (isRapidFireActive)
+                      Positioned(
+                        left: -5,
+                        right: -5,
+                        bottom: -18,
+                        child: Text(
+                          '${game.player.rapidFireTimer.ceil()}s',
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(
+                            color: Colors.amberAccent,
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            shadows: [
+                              Shadow(blurRadius: 6, color: Colors.black),
+                            ],
+                          ),
+                        ),
+                      ),
+                  ],
                 ),
-                Positioned(
-                  right: -3,
-                  top: -3,
-                  child: Container(
-                    height: 22,
-                    constraints: const BoxConstraints(minWidth: 22),
-                    alignment: Alignment.center,
-                    padding: const EdgeInsets.symmetric(horizontal: 5),
-                    decoration: BoxDecoration(
-                      color: hasStoredRapidFire
-                          ? Colors.amberAccent
-                          : const Color(0xFF777777),
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: Colors.white, width: 1.5),
-                    ),
-                    child: Text(
-                      '${game.storedRapidFires}',
-                      style: const TextStyle(
-                        color: Colors.black,
-                        fontSize: 13,
-                        fontWeight: FontWeight.w900,
-                      ),
-                    ),
-                  ),
-                ),
-                if (isRapidFireActive)
-                  Positioned(
-                    left: -5,
-                    right: -5,
-                    bottom: -18,
-                    child: Text(
-                      '${game.player.rapidFireTimer.ceil()}s',
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(
-                        color: Colors.amberAccent,
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
-                        shadows: [Shadow(blurRadius: 6, color: Colors.black)],
-                      ),
-                    ),
-                  ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       ],
@@ -1643,6 +1804,8 @@ class MyGame extends FlameGame
   int matchCoins = 0;
   int storedShields = 0;
   int storedRapidFires = 0;
+  List<ShipUpgradeType> currentUpgradeOptions = [];
+  Vector2 upgradeSelectionPosition = Vector2.zero();
   int destroyEnemiesMissionProgress = 0;
   int destroyEnemiesMissionClaimedAt = 0;
   int reachLevelMissionProgress = 1;
@@ -1787,7 +1950,8 @@ class MyGame extends FlameGame
 
     highScoreText = TextComponent(
       text: 'HI-SCORE: $highScore',
-      position: Vector2(15, 105),
+      position: Vector2(size.x / 2, 15),
+      anchor: Anchor.topCenter,
       textRenderer: TextPaint(
         style: const TextStyle(
           color: Colors.yellow,
@@ -2359,6 +2523,44 @@ class MyGame extends FlameGame
     return true;
   }
 
+  void completeLevel({required bool defeatedBoss}) {
+    if (defeatedBoss) {
+      showBossUpgradeSelection();
+      return;
+    }
+
+    advanceToNextLevel();
+  }
+
+  void advanceToNextLevel() {
+    currentLevel++;
+    updateLevel();
+    spawnLevel();
+  }
+
+  void showBossUpgradeSelection() {
+    upgradeSelectionPosition = Vector2(size.x / 2, size.y * 0.24);
+    currentUpgradeOptions =
+        ShipUpgradeType.values
+            .where(
+              (upgrade) =>
+                  upgrade != ShipUpgradeType.doubleShot ||
+                  !player.hasDoubleShot,
+            )
+            .toList()
+          ..shuffle(Random());
+    currentUpgradeOptions = currentUpgradeOptions.take(2).toList();
+    overlays.add('BossUpgrade');
+    pauseEngine();
+  }
+
+  void applyBossUpgrade(ShipUpgradeType upgrade) {
+    player.applyUpgrade(upgrade);
+    overlays.remove('BossUpgrade');
+    advanceToNextLevel();
+    resumeEngine();
+  }
+
   int enemyHealthForLevel(int level) {
     if (level <= 10) {
       return max(1, (level / 2).ceil());
@@ -2445,6 +2647,8 @@ class MyGame extends FlameGame
     matchCoinsSaved = false;
     storedShields = 0;
     storedRapidFires = 0;
+    currentUpgradeOptions = [];
+    upgradeSelectionPosition = Vector2.zero();
     currentLevel = 1;
     player.lives = 3;
     player.hitCount = 0;
@@ -2462,6 +2666,7 @@ class MyGame extends FlameGame
 
     clearActiveRunComponents();
     spawnLevel();
+    overlays.remove('BossUpgrade');
     overlays.add('PauseButton');
     resumeEngine();
   }
@@ -2473,6 +2678,8 @@ class MyGame extends FlameGame
     matchCoinsSaved = false;
     storedShields = 0;
     storedRapidFires = 0;
+    currentUpgradeOptions = [];
+    upgradeSelectionPosition = Vector2.zero();
     currentLevel = 1;
     player.lives = 3;
     player.hitCount = 0;
@@ -2496,6 +2703,7 @@ class MyGame extends FlameGame
     overlays.remove('ConfirmBackToMenu');
     overlays.remove('PauseButton');
     overlays.remove('GameOver');
+    overlays.remove('BossUpgrade');
     overlays.add('StartMenu');
     pauseEngine();
   }
@@ -2519,6 +2727,11 @@ class Player extends SpriteComponent with CollisionCallbacks {
   double rapidFireTimer = 0.0;
   double shieldTimer = 0.0;
   int weaponLevel = 1;
+  int damageUpgrade = 0;
+  double fireRateMultiplier = 1.0;
+  double bulletSpeedUpgradeMultiplier = 1.0;
+  double shieldDurationBonus = 0.0;
+  bool hasDoubleShot = false;
 
   int get shipNumber {
     if (shipAsset == 'ship.png') return 0;
@@ -2530,19 +2743,21 @@ class Player extends SpriteComponent with CollisionCallbacks {
   }
 
   int get bulletDamage {
-    return shipNumber + 1;
+    return shipNumber + 1 + damageUpgrade;
   }
 
-  double get normalShootInterval => switch (shipNumber) {
-    1 => 0.9,
-    3 => 0.8,
-    4 => 0.7,
-    5 => 0.6,
-    6 => 0.5,
-    7 => 0.4,
-    8 => 0.3,
-    _ => 1.0,
-  };
+  double get normalShootInterval =>
+      switch (shipNumber) {
+        1 => 0.9,
+        3 => 0.8,
+        4 => 0.7,
+        5 => 0.6,
+        6 => 0.5,
+        7 => 0.4,
+        8 => 0.3,
+        _ => 1.0,
+      } *
+      fireRateMultiplier;
 
   @override
   Future<void> onLoad() async {
@@ -2622,15 +2837,44 @@ class Player extends SpriteComponent with CollisionCallbacks {
   }
 
   void activateShield() {
-    shieldTimer = 5.0;
+    shieldTimer = 5.0 + shieldDurationBonus;
     (parent as MyGame).onShieldStateChanged?.call();
   }
 
+  void applyUpgrade(ShipUpgradeType upgrade) {
+    switch (upgrade) {
+      case ShipUpgradeType.damage:
+        damageUpgrade++;
+      case ShipUpgradeType.fireRate:
+        fireRateMultiplier = max(0.35, fireRateMultiplier * 0.9);
+      case ShipUpgradeType.bulletSpeed:
+        bulletSpeedUpgradeMultiplier += 0.15;
+      case ShipUpgradeType.shieldDuration:
+        shieldDurationBonus += 2.0;
+      case ShipUpgradeType.doubleShot:
+        hasDoubleShot = true;
+    }
+  }
+
   void shoot() {
+    if (hasDoubleShot) {
+      for (final offsetX in [-10.0, 10.0]) {
+        _spawnBullet(
+          Vector2(0, -1),
+          offsetX: offsetX,
+          color: bulletColor,
+          speedMultiplier: bulletSpeedMultiplier * bulletSpeedUpgradeMultiplier,
+          sizeBonus: bulletSizeBonus,
+          style: bulletStyle,
+        );
+      }
+      return;
+    }
+
     _spawnBullet(
       Vector2(0, -1),
       color: bulletColor,
-      speedMultiplier: bulletSpeedMultiplier,
+      speedMultiplier: bulletSpeedMultiplier * bulletSpeedUpgradeMultiplier,
       sizeBonus: bulletSizeBonus,
       style: bulletStyle,
     );
@@ -2709,6 +2953,11 @@ class Player extends SpriteComponent with CollisionCallbacks {
     shieldTimer = 0.0;
     shootTimer = 0.0;
     weaponLevel = 1;
+    damageUpgrade = 0;
+    fireRateMultiplier = 1.0;
+    bulletSpeedUpgradeMultiplier = 1.0;
+    shieldDurationBonus = 0.0;
+    hasDoubleShot = false;
   }
 
   @override
@@ -2906,9 +3155,7 @@ class PlayerBullet extends PositionComponent with CollisionCallbacks {
 
         // Check if level complete
         if (game.enemies.isEmpty) {
-          game.currentLevel++;
-          game.updateLevel();
-          game.spawnLevel();
+          game.completeLevel(defeatedBoss: defeatedEnemyWasBoss);
         }
       }
       // Create explosion animation
