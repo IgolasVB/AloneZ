@@ -12,5 +12,3 @@
 
 - Adicionar som aos tiros.
 - Tomar cuidado para o som dos tiros nao causar lag, principalmente com tiro rapido ou muitos disparos na tela.
-- Mudar raio q cai ( colocar menos tempo e usar quando quiser)
-- Aprimor uma diferença de nave pra nave
