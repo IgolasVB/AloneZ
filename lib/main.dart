@@ -2957,12 +2957,14 @@ class MyGame extends FlameGame
   void spawnLevel() {
     enemies.clear();
 
-    if (currentLevel >= 10 && currentLevel <= 100 && currentLevel % 10 == 0) {
+    if (currentLevel >= 10 && currentLevel % 10 == 0) {
       final boss = Enemy();
       boss.gameSize = size;
       boss.player = player;
       boss.level = currentLevel;
-      boss.bossLevel = currentLevel ~/ 10;
+      boss.bossLevel = currentLevel <= 100
+          ? currentLevel ~/ 10
+          : Random().nextInt(10) + 1;
       boss.maxHealth = boss.bossMaxHealth;
       boss.health = boss.maxHealth;
       boss.targetY = size.y * 0.12;
