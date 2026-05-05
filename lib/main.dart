@@ -107,18 +107,28 @@ extension ShipUpgradeTypeDetails on ShipUpgradeType {
   };
 }
 
-class MyApp extends StatelessWidget {
+class MyApp extends StatefulWidget {
   const MyApp({super.key});
+
+  @override
+  State<MyApp> createState() => _MyAppState();
+}
+
+class _MyAppState extends State<MyApp> {
+  MyGame? _game;
 
   @override
   Widget build(BuildContext context) {
     final padding = MediaQuery.of(context).padding;
+    final game = _game ??= MyGame(padding: padding);
+    game.padding = padding;
+
     return MaterialApp(
       title: 'AloneZ',
       home: SafeArea(
         child: Scaffold(
           body: GameWidget(
-            game: MyGame(padding: padding),
+            game: game,
             autofocus: true,
             initialActiveOverlays: const ['StartMenu'],
             overlayBuilderMap: {
@@ -572,9 +582,7 @@ class MyApp extends StatelessWidget {
                       const SizedBox(height: 40),
                       ElevatedButton(
                         onPressed: () {
-                          game.overlays.remove('PauseMenu');
-                          game.overlays.add('PauseButton');
-                          game.resumeEngine();
+                          game.startResumeCountdown();
                         },
                         style: ElevatedButton.styleFrom(
                           padding: const EdgeInsets.symmetric(
@@ -617,6 +625,9 @@ class MyApp extends StatelessWidget {
                     ],
                   ),
                 );
+              },
+              'ResumeCountdown': (BuildContext context, MyGame game) {
+                return ResumeCountdownView(game: game);
               },
               'ConfirmBackToMenu': (BuildContext context, MyGame game) {
                 return Center(
@@ -692,6 +703,65 @@ class MyApp extends StatelessWidget {
                 );
               },
             },
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class ResumeCountdownView extends StatefulWidget {
+  final MyGame game;
+
+  const ResumeCountdownView({super.key, required this.game});
+
+  @override
+  State<ResumeCountdownView> createState() => _ResumeCountdownViewState();
+}
+
+class _ResumeCountdownViewState extends State<ResumeCountdownView> {
+  int count = 2;
+  async.Timer? timer;
+
+  @override
+  void initState() {
+    super.initState();
+    timer = async.Timer.periodic(const Duration(seconds: 1), (_) {
+      if (!mounted) return;
+      if (count <= 1) {
+        timer?.cancel();
+        widget.game.finishResumeCountdown();
+        return;
+      }
+      setState(() {
+        count--;
+      });
+    });
+  }
+
+  @override
+  void dispose() {
+    timer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Positioned.fill(
+      child: ColoredBox(
+        color: const Color(0x66000000),
+        child: Center(
+          child: Text(
+            '$count',
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 96,
+              fontWeight: FontWeight.bold,
+              shadows: [
+                Shadow(blurRadius: 16, color: Colors.cyan),
+                Shadow(blurRadius: 12, color: Colors.black),
+              ],
+            ),
           ),
         ),
       ),
@@ -2927,8 +2997,22 @@ class MyGame extends FlameGame
     isGameOver = true;
     saveMatchCoins();
     overlays.remove('PauseButton');
+    overlays.remove('ResumeCountdown');
     overlays.add('GameOver');
     pauseEngine();
+  }
+
+  void startResumeCountdown() {
+    if (isGameOver) return;
+    overlays.remove('PauseMenu');
+    overlays.add('ResumeCountdown');
+  }
+
+  void finishResumeCountdown() {
+    if (isGameOver) return;
+    overlays.remove('ResumeCountdown');
+    overlays.add('PauseButton');
+    resumeEngine();
   }
 
   void saveMatchCoins() {
@@ -2965,7 +3049,7 @@ class MyGame extends FlameGame
     currentUpgradeOptions = [];
     upgradeSelectionPosition = Vector2.zero();
     currentLevel = 1;
-    player.lives = 3;
+    player.lives = Player.initialLives;
     player.hitCount = 0;
     player.resetPowerups();
     updateScore();
@@ -2982,6 +3066,7 @@ class MyGame extends FlameGame
     clearActiveRunComponents();
     spawnLevel();
     overlays.remove('BossUpgrade');
+    overlays.remove('ResumeCountdown');
     overlays.add('PauseButton');
     resumeEngine();
   }
@@ -2996,7 +3081,7 @@ class MyGame extends FlameGame
     currentUpgradeOptions = [];
     upgradeSelectionPosition = Vector2.zero();
     currentLevel = 1;
-    player.lives = 3;
+    player.lives = Player.initialLives;
     player.hitCount = 0;
     player.resetPowerups();
     updateScore();
@@ -3017,6 +3102,7 @@ class MyGame extends FlameGame
     overlays.remove('PauseMenu');
     overlays.remove('ConfirmBackToMenu');
     overlays.remove('PauseButton');
+    overlays.remove('ResumeCountdown');
     overlays.remove('GameOver');
     overlays.remove('BossUpgrade');
     overlays.add('StartMenu');
@@ -3025,6 +3111,7 @@ class MyGame extends FlameGame
 }
 
 class Player extends SpriteComponent with CollisionCallbacks {
+  static const int initialLives = 5;
   static const double speed = 200.0;
   static const double playerSize = 50.0;
   static const double rapidFireShootInterval = 0.07;
@@ -3038,7 +3125,7 @@ class Player extends SpriteComponent with CollisionCallbacks {
   Vector2 hudMoveDirection = Vector2.zero();
 
   late Vector2 gameSize;
-  int lives = 3;
+  int lives = initialLives;
   int hitCount = 0;
   double shootTimer = 0.0;
   double rapidFireTimer = 0.0;
@@ -3651,6 +3738,9 @@ class PlayerBullet extends PositionComponent with CollisionCallbacks {
 class Enemy extends SpriteComponent {
   static const double enemySize = 40.0;
   static const double bossSize = 120.0;
+  static const int balancedDifficultyTier = 7;
+  static const double postLevel70MoveSpeedGain = 8.0;
+  static const double postLevel70BulletSpeedGain = 15.0;
   final Random movementRandom = Random();
   late Vector2 gameSize;
   late Player player;
@@ -3723,7 +3813,22 @@ class Enemy extends SpriteComponent {
     1 => 15,
     _ => 1,
   };
-  int get bulletDamage => isBoss ? bossLevel : 1;
+  int get bossOffenseLevel => min(bossLevel, 6);
+  int get bossBulletDamage => min(bossLevel, 4);
+  int get bulletDamage => isBoss ? bossBulletDamage : 1;
+
+  double get balancedBulletSpeedTier {
+    final difficultyTier = level ~/ 10;
+    if (isBoss) {
+      return min(difficultyTier, 6).toDouble();
+    }
+    if (difficultyTier <= balancedDifficultyTier) {
+      return difficultyTier.toDouble();
+    }
+    final extraTier = difficultyTier - balancedDifficultyTier;
+    return balancedDifficultyTier +
+        (extraTier * postLevel70BulletSpeedGain / 50.0);
+  }
 
   @override
   Future<void> onLoad() async {
@@ -3736,11 +3841,7 @@ class Enemy extends SpriteComponent {
     int difficultyTier = level ~/ 10;
 
     if (isBoss) {
-      moveSpeed = switch (bossLevel) {
-        10 => 240.0,
-        9 => 225.0,
-        8 => 210.0,
-        7 => 195.0,
+      moveSpeed = switch (bossOffenseLevel) {
         6 => 180.0,
         5 => 165.0,
         4 => 150.0,
@@ -3748,11 +3849,7 @@ class Enemy extends SpriteComponent {
         2 => 115.0,
         _ => 90.0,
       };
-      shootInterval = switch (bossLevel) {
-        10 => 0.14,
-        9 => 0.17,
-        8 => 0.19,
-        7 => 0.21,
+      shootInterval = switch (bossOffenseLevel) {
         6 => 0.24,
         5 => 0.27,
         4 => 0.30,
@@ -3764,7 +3861,15 @@ class Enemy extends SpriteComponent {
     }
 
     // Mais rápido a cada 10 níveis (começa em 50)
-    moveSpeed = 50.0 + (difficultyTier * 20.0);
+    if (difficultyTier <= balancedDifficultyTier) {
+      moveSpeed = 50.0 + (difficultyTier * 20.0);
+    } else {
+      final extraTier = difficultyTier - balancedDifficultyTier;
+      moveSpeed =
+          50.0 +
+          (balancedDifficultyTier * 20.0) +
+          (extraTier * postLevel70MoveSpeedGain);
+    }
     pickRandomMovement();
     if (difficultyTier >= 1) {
       // A partir do level 10, como tem menos naves, elas atiram BEM mais rápido para compensar
@@ -3861,7 +3966,7 @@ class Enemy extends SpriteComponent {
   void shoot() {
     final bullet = Bullet();
     bullet.position = position.clone() + Vector2(size.x / 2, size.y * 0.8);
-    bullet.difficultyTier = level ~/ 10; // Repassa a dificuldade para a bala
+    bullet.difficultyTier = balancedBulletSpeedTier;
     bullet.damage = bulletDamage;
 
     // Calculate base direction towards player
@@ -3902,7 +4007,7 @@ class Bullet extends PositionComponent with CollisionCallbacks {
   static const double bulletSize = 10.0;
   late double speed;
   late Vector2 direction;
-  int difficultyTier = 0;
+  double difficultyTier = 0;
   int damage = 1;
 
   @override
