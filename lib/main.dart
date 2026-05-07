@@ -453,6 +453,28 @@ class _MyAppState extends State<MyApp> {
                                         setState(() {});
                                       },
                                     ),
+                                    ShopShipCard(
+                                      imagePath: 'assets/images/ship9.png',
+                                      name: 'NAVE ESTELAR',
+                                      price: MyGame.ship9Price,
+                                      owned: game.ownsShip9,
+                                      canBuy: game.canBuyShip9,
+                                      onBuy: () {
+                                        game.buyShip9();
+                                        setState(() {});
+                                      },
+                                    ),
+                                    ShopShipCard(
+                                      imagePath: 'assets/images/ship10.png',
+                                      name: 'NAVE SUPREMA',
+                                      price: MyGame.ship10Price,
+                                      owned: game.ownsShip10,
+                                      canBuy: game.canBuyShip10,
+                                      onBuy: () {
+                                        game.buyShip10();
+                                        setState(() {});
+                                      },
+                                    ),
                                   ],
                                 ),
                                 const SizedBox(height: 20),
@@ -2004,6 +2026,28 @@ class InventoryMenuView extends StatelessWidget {
                         onChanged();
                       },
                     ),
+                    InventoryShipCard(
+                      imagePath: 'assets/images/ship9.png',
+                      assetName: 'ship9.png',
+                      name: 'NAVE ESTELAR',
+                      unlocked: game.ownsShip9,
+                      selected: game.selectedShipAsset == 'ship9.png',
+                      onSelect: () async {
+                        await game.selectShip('ship9.png');
+                        onChanged();
+                      },
+                    ),
+                    InventoryShipCard(
+                      imagePath: 'assets/images/ship10.png',
+                      assetName: 'ship10.png',
+                      name: 'NAVE SUPREMA',
+                      unlocked: game.ownsShip10,
+                      selected: game.selectedShipAsset == 'ship10.png',
+                      onSelect: () async {
+                        await game.selectShip('ship10.png');
+                        onChanged();
+                      },
+                    ),
                   ],
                 ),
                 const SizedBox(height: 28),
@@ -2161,6 +2205,8 @@ class MyGame extends FlameGame
   static const int ship6Price = 1500;
   static const int ship7Price = 4000;
   static const int ship8Price = 10000;
+  static const int ship9Price = 12000;
+  static const int ship10Price = 15000;
 
   late Player player;
   final List<Enemy> enemies = [];
@@ -2195,6 +2241,8 @@ class MyGame extends FlameGame
   bool ownsShip6 = false;
   bool ownsShip7 = false;
   bool ownsShip8 = false;
+  bool ownsShip9 = false;
+  bool ownsShip10 = false;
   String selectedShipAsset = 'ship.png';
   ControlMode controlMode = ControlMode.drag;
   RewardedAd? _freeCoinsRewardedAd;
@@ -2247,6 +2295,8 @@ class MyGame extends FlameGame
     ownsShip6 = prefs.getBool('ownsShip6') ?? false;
     ownsShip7 = prefs.getBool('ownsShip7') ?? false;
     ownsShip8 = prefs.getBool('ownsShip8') ?? false;
+    ownsShip9 = prefs.getBool('ownsShip9') ?? false;
+    ownsShip10 = prefs.getBool('ownsShip10') ?? false;
     selectedShipAsset = prefs.getString('selectedShipAsset') ?? 'ship.png';
     controlMode = ControlModeDetails.fromStorage(
       prefs.getString('controlMode'),
@@ -2745,6 +2795,8 @@ class MyGame extends FlameGame
   bool get canBuyShip6 => !ownsShip6 && coins >= ship6Price;
   bool get canBuyShip7 => !ownsShip7 && coins >= ship7Price;
   bool get canBuyShip8 => !ownsShip8 && coins >= ship8Price;
+  bool get canBuyShip9 => !ownsShip9 && coins >= ship9Price;
+  bool get canBuyShip10 => !ownsShip10 && coins >= ship10Price;
 
   bool isShipUnlocked(String assetName) {
     if (assetName == 'ship.png') return true;
@@ -2755,6 +2807,8 @@ class MyGame extends FlameGame
     if (assetName == 'ship6.png') return ownsShip6;
     if (assetName == 'ship7.png') return ownsShip7;
     if (assetName == 'ship8.png') return ownsShip8;
+    if (assetName == 'ship9.png') return ownsShip9;
+    if (assetName == 'ship10.png') return ownsShip10;
     return false;
   }
 
@@ -2840,6 +2894,26 @@ class MyGame extends FlameGame
     ownsShip8 = true;
     prefs.setInt('coins', coins);
     prefs.setBool('ownsShip8', ownsShip8);
+    return true;
+  }
+
+  bool buyShip9() {
+    if (!canBuyShip9) return false;
+
+    coins -= ship9Price;
+    ownsShip9 = true;
+    prefs.setInt('coins', coins);
+    prefs.setBool('ownsShip9', ownsShip9);
+    return true;
+  }
+
+  bool buyShip10() {
+    if (!canBuyShip10) return false;
+
+    coins -= ship10Price;
+    ownsShip10 = true;
+    prefs.setInt('coins', coins);
+    prefs.setBool('ownsShip10', ownsShip10);
     return true;
   }
 
@@ -3149,6 +3223,7 @@ class Player extends SpriteComponent with CollisionCallbacks {
   }
 
   int get bulletDamage {
+    if (shipNumber == 10) return 13 + damageUpgrade;
     return shipNumber + 1 + damageUpgrade;
   }
 
@@ -3161,6 +3236,8 @@ class Player extends SpriteComponent with CollisionCallbacks {
         6 => 0.5,
         7 => 0.4,
         8 => 0.3,
+        9 => 0.28,
+        10 => 0.25,
         _ => 1.0,
       } *
       fireRateMultiplier;
@@ -3321,6 +3398,8 @@ class Player extends SpriteComponent with CollisionCallbacks {
     6 => Colors.greenAccent,
     7 => Colors.deepOrangeAccent,
     8 => Colors.cyanAccent,
+    9 => Colors.indigoAccent,
+    10 => Colors.white,
     _ => Colors.cyan,
   };
 
@@ -3332,6 +3411,8 @@ class Player extends SpriteComponent with CollisionCallbacks {
     6 => 5,
     7 => 6,
     8 => 7,
+    9 => 7,
+    10 => 7,
     _ => 0,
   };
 
@@ -3342,6 +3423,8 @@ class Player extends SpriteComponent with CollisionCallbacks {
   double get bulletSpeedMultiplier => switch (shipNumber) {
     6 => 1.45,
     8 => 1.25,
+    9 => 1.35,
+    10 => 1.5,
     _ => 1.0,
   };
 
@@ -3803,17 +3886,17 @@ class Enemy extends SpriteComponent {
     _ => 10,
   };
   int get coinReward => switch (bossLevel) {
-    10 => 300,
-    9 => 230,
-    8 => 180,
-    7 => 145,
-    6 => 120,
-    5 => 85,
-    4 => 60,
-    3 => 40,
-    2 => 25,
-    1 => 15,
-    _ => 1,
+    10 => 400,
+    9 => 300,
+    8 => 230,
+    7 => 180,
+    6 => 150,
+    5 => 110,
+    4 => 80,
+    3 => 55,
+    2 => 35,
+    1 => 25,
+    _ => level >= 50 ? 2 : 1,
   };
   int get bossOffenseLevel => min(bossLevel, 6);
   int get bossBulletDamage => min(bossLevel, 4);
