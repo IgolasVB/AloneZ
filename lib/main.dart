@@ -2185,7 +2185,12 @@ class InventoryShipCard extends StatelessWidget {
 }
 
 class MyGame extends FlameGame
-    with KeyboardEvents, PanDetector, TapDetector, HasCollisionDetection {
+    with
+        KeyboardEvents,
+        PanDetector,
+        TapDetector,
+        HasCollisionDetection,
+        WidgetsBindingObserver {
   static const int freeCoinsRewardAmount = 100;
   static const int freeCoinsCooldownMs = 5 * 60 * 1000;
   static const int freeCoinsDailyAdLimit = 20;
@@ -2256,6 +2261,7 @@ class MyGame extends FlameGame
       : 'Anuncios disponiveis apenas no Android/iOS.';
   VoidCallback? onFreeCoinsAdStateChanged;
   VoidCallback? onShieldStateChanged;
+  bool _pausedByLifecycle = false;
 
   MyGame({required this.padding});
 
@@ -2269,6 +2275,8 @@ class MyGame extends FlameGame
 
   @override
   Future<void> onLoad() async {
+    WidgetsBinding.instance.addObserver(this);
+
     // Carrega o high score
     prefs = await SharedPreferences.getInstance();
     highScore = prefs.getInt('highScore') ?? 0;
@@ -2410,9 +2418,46 @@ class MyGame extends FlameGame
 
   @override
   void onRemove() {
+    WidgetsBinding.instance.removeObserver(this);
     _freeCoinsRewardedAd?.dispose();
     _freeCoinsRewardedAd = null;
     super.onRemove();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    switch (state) {
+      case AppLifecycleState.resumed:
+        _resumeFromLifecyclePause();
+      case AppLifecycleState.inactive:
+      case AppLifecycleState.hidden:
+      case AppLifecycleState.paused:
+      case AppLifecycleState.detached:
+        _pauseForLifecycle();
+    }
+  }
+
+  bool get _isActiveRunOverlayVisible =>
+      overlays.isActive('PauseButton') || overlays.isActive('ResumeCountdown');
+
+  void _pauseForLifecycle() {
+    if (_pausedByLifecycle || isGameOver || !_isActiveRunOverlayVisible) {
+      return;
+    }
+
+    _pausedByLifecycle = true;
+    overlays.remove('PauseButton');
+    overlays.remove('ResumeCountdown');
+    pauseEngine();
+  }
+
+  void _resumeFromLifecyclePause() {
+    if (!_pausedByLifecycle) return;
+
+    _pausedByLifecycle = false;
+    if (isGameOver) return;
+
+    startResumeCountdown();
   }
 
   @override
